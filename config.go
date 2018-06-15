@@ -17,6 +17,8 @@ import (
 
 const (
 	defaultConfigFilename = "dcrseeder.conf"
+	defaultIP             = "127.0.0.1"
+	defaultPort           = "5354"
 )
 
 var (
@@ -33,7 +35,9 @@ var (
 // See loadConfig for details on the configuration load process.
 type config struct {
 	Host       string `short:"H" long:"host" description:"hostname"`
+	IP         string `short:"i" long:"local ip address to listen on"`
 	Nameserver string `short:"n" long:"nameserver" description:"hostname of nameserver"`
+	Port       string `short:"p" long:"local port to listen on"`
 	Seeder     string `short:"s" long:"default seeder" description:"IP address of a  working node"`
 	TestNet    bool   `long:"testnet" description:"Use the test network"`
 }
@@ -58,7 +62,10 @@ func loadConfig() (*config, error) {
 	}
 
 	// Default config.
-	cfg := config{}
+	cfg := config{
+		IP:   defaultIP,
+		Port: defaultPort,
+	}
 
 	preCfg := cfg
 	preParser := flags.NewParser(&preCfg, flags.Default)
