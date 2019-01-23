@@ -114,13 +114,18 @@ func isRoutable(addr net.IP) bool {
 }
 
 func NewManager(dataDir string) (*Manager, error) {
+	err := os.MkdirAll(dataDir, 0700)
+	if err != nil {
+		return nil, err
+	}
+
 	amgr := Manager{
 		nodes:     make(map[string]*Node),
 		peersFile: filepath.Join(dataDir, peersFilename),
 		quit:      make(chan struct{}),
 	}
 
-	err := amgr.deserializePeers()
+	err = amgr.deserializePeers()
 	if err != nil {
 		log.Printf("Failed to parse file %s: %v", amgr.peersFile, err)
 		// if it is invalid we nuke the old one unconditionally.

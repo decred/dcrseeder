@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -90,7 +91,6 @@ func creep() {
 				conn, err := net.DialTimeout("tcp", p.Addr(),
 					defaultNodeTimeout)
 				if err != nil {
-					log.Printf("%v", err)
 					return
 				}
 				p.AssociateConnection(conn)
@@ -133,7 +133,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "loadConfig: %v\n", err)
 		os.Exit(1)
 	}
-	amgr, err = NewManager(defaultHomeDir)
+	amgr, err = NewManager(filepath.Join(defaultHomeDir,
+		activeNetParams.Name))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NewManager: %v\n", err)
 		os.Exit(1)
