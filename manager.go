@@ -113,7 +113,7 @@ func isRoutable(addr net.IP) bool {
 	return true
 }
 
-func NewManager(dataDir string) (*Manager, error) {
+func NewManager(dataDir string) *Manager {
 	amgr := Manager{
 		nodes:     make(map[string]*Node),
 		peersFile: filepath.Join(dataDir, peersFilename),
@@ -133,7 +133,7 @@ func NewManager(dataDir string) (*Manager, error) {
 
 	go amgr.addressHandler()
 
-	return &amgr, nil
+	return &amgr
 }
 
 func (m *Manager) AddAddresses(addrs []net.IP) int {

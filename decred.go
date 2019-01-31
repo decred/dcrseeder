@@ -53,7 +53,7 @@ func creep() {
 					p.Addr(), len(msg.AddrList), added)
 				onaddr <- struct{}{}
 			},
-			OnVerAck: func(p *peer.Peer, msg *wire.MsgVerAck) {
+			OnVerAck: func(p *peer.Peer, _ *wire.MsgVerAck) {
 				log.Printf("Adding peer %v with services %v",
 					p.NA().IP.String(), p.Services())
 
@@ -133,18 +133,18 @@ func main() {
 		fmt.Fprintf(os.Stderr, "loadConfig: %v\n", err)
 		os.Exit(1)
 	}
-	amgr, err = NewManager(defaultHomeDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "NewManager: %v\n", err)
-		os.Exit(1)
-	}
-
+	amgr = NewManager(defaultHomeDir)
 	amgr.AddAddresses([]net.IP{net.ParseIP(cfg.Seeder)})
 
 	wg.Add(1)
 	go creep()
 
-	dnsServer := NewDNSServer(cfg.Host, cfg.Nameserver, cfg.Listen)
+	dnsServer, err := NewDNSServer(cfg.Host, cfg.Nameserver, cfg.Listen)
+	if err != nil {
+		fmt.Fprint(os.Stderr, err)
+		os.Exit(1)
+	}
+	wg.Add(1)
 	go dnsServer.Start()
 
 	wg.Wait()

@@ -103,21 +103,21 @@ func loadConfig() (*config, error) {
 	}
 
 	if len(cfg.Host) == 0 {
-		str := "Please specify a hostname"
+		str := "please specify a hostname"
 		err := fmt.Errorf(str)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
 
 	if len(cfg.Nameserver) == 0 {
-		str := "Please specify a nameserver"
+		str := "please specify a nameserver"
 		err := fmt.Errorf(str)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}
 
 	if len(cfg.Seeder) == 0 {
-		str := "Please specify a seeder"
+		str := "please specify a seeder"
 		err := fmt.Errorf(str)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, err

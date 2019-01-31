@@ -44,6 +44,7 @@ func (d *DNSServer) Start() {
 	}
 	defer udpListen.Close()
 
+	minRequiredLabels := dns.CountLabel(d.hostname)
 	for {
 		b := make([]byte, 512)
 		_, addr, err := udpListen.ReadFromUDP(b)
@@ -54,7 +55,7 @@ func (d *DNSServer) Start() {
 
 		go func() {
 			dnsMsg := new(dns.Msg)
-			err = dnsMsg.Unpack(b[:])
+			err = dnsMsg.Unpack(b)
 			if err != nil {
 				log.Printf("%s: invalid dns message: %v",
 					addr, err)
@@ -65,24 +66,36 @@ func (d *DNSServer) Start() {
 					addr, len(dnsMsg.Question))
 				return
 			}
-			domainName := strings.ToLower(dnsMsg.Question[0].Name)
-			ff := strings.LastIndex(domainName, d.hostname)
-			if ff < 0 {
-				log.Printf("invalid name: %s",
+
+			if !dns.IsSubDomain(d.hostname, dnsMsg.Question[0].Name) {
+				log.Printf("%s: invalid hostname: %v", addr,
 					dnsMsg.Question[0].Name)
 				return
 			}
-
-			wantedSF := wire.SFNodeNetwork
-			labels := dns.SplitDomainName(domainName)
-			if labels[0][0] == 'x' && len(labels[0]) > 1 {
-				wantedSFStr := labels[0][1:]
+			var wantedSF wire.ServiceFlag
+			numLabels := dns.CountLabel(dnsMsg.Question[0].Name) - minRequiredLabels
+			switch numLabels {
+			case 0:
+				wantedSF = wire.SFNodeNetwork
+			case 1:
+				labels := dns.SplitDomainName(dnsMsg.Question[0].Name)
+				label := strings.ToLower(labels[0])
+				if len(label) < 2 || label[0] != 'x' {
+					log.Printf("invalid name: %s",
+						dnsMsg.Question[0].Name)
+					return
+				}
+				wantedSFStr := label[1:]
 				u, err := strconv.ParseUint(wantedSFStr, 10, 64)
 				if err != nil {
 					log.Printf("%s: ParseUint: %v", addr, err)
 					return
 				}
 				wantedSF = wire.ServiceFlag(u)
+			default:
+				log.Printf("%s: invalid hostname: %v", addr,
+					dnsMsg.Question[0].Name)
+				return
 			}
 
 			var atype string
@@ -136,7 +149,6 @@ func (d *DNSServer) Start() {
 				respMsg.Answer = append(respMsg.Answer, newRR)
 			}
 
-			//done:
 			sendBytes, err := respMsg.Pack()
 			if err != nil {
 				log.Printf("%s: failed to pack response: %v",
@@ -154,17 +166,16 @@ func (d *DNSServer) Start() {
 	}
 }
 
-func NewDNSServer(hostname, nameserver, listen string) *DNSServer {
-	if hostname[len(hostname)-1] != '.' {
-		hostname = hostname + "."
+func NewDNSServer(hostname, nameserver, listen string) (*DNSServer, error) {
+	if !dns.IsFqdn(hostname) {
+		return nil, fmt.Errorf("%s is not a fqdn", hostname)
 	}
-	if nameserver[len(nameserver)-1] != '.' {
-		nameserver = nameserver + "."
+	if !dns.IsFqdn(nameserver) {
+		return nil, fmt.Errorf("%s is not a fqdn", nameserver)
 	}
-
 	return &DNSServer{
 		hostname:   hostname,
 		listen:     listen,
 		nameserver: nameserver,
-	}
+	}, nil
 }
