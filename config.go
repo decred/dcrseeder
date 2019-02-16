@@ -38,6 +38,8 @@ type config struct {
 	Listen     string `long:"listen" short:"l" description:"Listen on address:port"`
 	Nameserver string `short:"n" long:"nameserver" description:"hostname of nameserver"`
 	Seeder     string `short:"s" long:"default seeder" description:"IP address of a  working node"`
+	ZSK        string `long:"zsk" short:"z" description:"ZSK key prefix"`
+	KSK        string `long:"ksk" short:"k" description:"KSK key prefix"`
 	TestNet    bool   `long:"testnet" description:"Use testnet"`
 }
 
@@ -118,6 +120,20 @@ func loadConfig() (*config, error) {
 
 	if len(cfg.Seeder) == 0 {
 		str := "Please specify a seeder"
+		err := fmt.Errorf(str)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, err
+	}
+
+	if len(cfg.ZSK) == 0 {
+		str := "Please specify the keytag of the ZSK"
+		err := fmt.Errorf(str)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, err
+	}
+
+	if len(cfg.KSK) == 0 {
+		str := "Please specify the keytag of the KSK"
 		err := fmt.Errorf(str)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, err

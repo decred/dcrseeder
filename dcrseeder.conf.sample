@@ -1,0 +1,13 @@
+
+# host=testnet-seed.example.org
+# default seeder=1.2.3.4
+# nameserver=ns1.example.org
+listen=0.0.0.0:5354
+
+
+# DNSSEC configuration
+# see the dnssec-keygen tool in dcrseeder
+# on how to generate these
+
+# zsk=Ktestnet-seed.stakey.org.+10+32126
+# ksk=Ktestnet-seed.stakey.org.+10+57234

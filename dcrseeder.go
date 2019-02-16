@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/decred/dcrseeder/dnssec"
 	"log"
 	"net"
 	"os"
@@ -133,6 +134,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "loadConfig: %v\n", err)
 		os.Exit(1)
 	}
+
+	err = dnssec.Initialize(defaultHomeDir, cfg.Host, cfg.ZSK, cfg.KSK)
+	if err != nil {
+		log.Printf("DNSSEC not initialized: %v", err)
+		os.Exit(1)
+	}
+
 	amgr, err = NewManager(defaultHomeDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NewManager: %v\n", err)

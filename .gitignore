@@ -1,3 +1,5 @@
-dcrseeder
-
 vendor/
+/dnssec-keygen
+/dcrseeder
+/.idea
+/testdata/nodes.json

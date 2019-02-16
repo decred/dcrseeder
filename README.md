@@ -52,6 +52,11 @@ $ ./dcrseeder -n nameserver.example.com -H network-seed.example.com -s 192.168.0
 
 You will then need to redirect DNS traffic on your public IP port 53 to 127.0.0.1:5354
 
+#### DNSSEC support
+
+In order to protect clients from DNS cache poisoning attacks, `dcrseeder` can operate in 
+DNSSEC enabled mode.  See [dnssec/](dnssec/) for information on how to configure this.
+
 ## Issue Tracker
 
 The [integrated github issue tracker](https://github.com/decred/dcrseeder/issues)
