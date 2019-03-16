@@ -1,15 +1,5 @@
 #!/usr/bin/env bash
 
-# usage:
-# ./run_tests.sh                         # local, go 1.11
-# GOVERSION=1.10 ./run_tests.sh          # local, go 1.10 (vgo)
-# ./run_tests.sh docker                  # docker, go 1.11
-# GOVERSION=1.10 ./run_tests.sh docker   # docker, go 1.10 (vgo)
-# ./run_tests.sh podman                  # podman, go 1.11
-# GOVERSION=1.10 ./run_tests.sh podman   # podman, go 1.10 (vgo)
-
-set -ex
-
 # The script does automatic checking on a Go package and its sub-packages,
 # including:
 # 1. gofmt         (http://golang.org/cmd/gofmt/)
@@ -18,6 +8,8 @@ set -ex
 # 4. unconvert     (https://github.com/mdempsky/unconvert)
 # 5. ineffassign   (https://github.com/gordonklaus/ineffassign)
 # 6. race detector (http://blog.golang.org/race-detector)
+
+set -ex
 
 # golangci-lint (github.com/golangci/golangci-lint) is used to run each each
 # static checker.
@@ -28,20 +20,13 @@ set -ex
 # for more details.
 
 # Default GOVERSION
-[[ ! "$GOVERSION" ]] && GOVERSION=1.11
+[[ ! "$GOVERSION" ]] && GOVERSION=1.12
 REPO=dcrseeder
 
 testrepo () {
   GO=go
-  if [[ $GOVERSION == 1.10 ]]; then
-    GO=vgo
-  fi
 
   $GO version
-
-  # binary needed for RPC tests
-  env CC=gcc $GO build
-  cp "$REPO" "$GOPATH/bin/"
 
   # run tests on all modules
   ROOTPATH=$($GO list -m -f {{.Dir}} 2>/dev/null)
@@ -51,23 +36,21 @@ testrepo () {
   MODPATHS=". $MODPATHS"
   for module in $MODPATHS; do
     echo "==> ${module}"
-    (cd $module && env GORACE='halt_on_error=1' CC=gcc $GO test -race \
+    (cd $module && env GORACE='halt_on_error=1' $GO test -race \
 	  ./...)
   done
 
   # check linters
-  if [[ $GOVERSION != 1.10 ]]; then
-    # linters do not work with modules yet
-    golangci-lint run --disable-all --deadline=10m \
-      --enable=gofmt \
-      --enable=vet \
-      --enable=gosimple \
-      --enable=unconvert \
-      --enable=ineffassign
-    if [ $? != 0 ]; then
-      echo 'golangci-lint has some complaints'
-      exit 1
-    fi
+  # linters do not work with modules yet
+  golangci-lint run --disable-all --deadline=10m \
+    --enable=gofmt \
+    --enable=vet \
+    --enable=gosimple \
+    --enable=unconvert \
+    --enable=ineffassign
+  if [ $? != 0 ]; then
+    echo 'golangci-lint has some complaints'
+    exit 1
   fi
 
   echo "------------------------------------------"
