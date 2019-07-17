@@ -1,15 +1,10 @@
 language: go
 go:
-  - 1.x
-
-sudo: required
-services:
-  - docker
-
-env:
-  - GOVERSION=1.11
-
-install: true
-
+  - 1.12.x
+sudo: false
+install:
+  - go get -v github.com/golangci/golangci-lint/cmd/golangci-lint
 script:
-  - ./run_tests.sh docker
+  - export GO111MODULE=on
+  - go build ./...
+  - ./goclean.sh
