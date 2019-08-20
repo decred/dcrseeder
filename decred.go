@@ -13,7 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/decred/dcrd/peer"
+	"github.com/decred/dcrd/chaincfg/v2"
+	"github.com/decred/dcrd/peer/v2"
 	"github.com/decred/dcrd/wire"
 )
 
@@ -32,7 +33,7 @@ var (
 	wg   sync.WaitGroup
 )
 
-func creep() {
+func creep(netParams *chaincfg.Params) {
 	defer wg.Done()
 
 	onaddr := make(chan struct{})
@@ -40,7 +41,7 @@ func creep() {
 	config := peer.Config{
 		UserAgentName:    "dcrpeersniffer",
 		UserAgentVersion: "0.0.1",
-		ChainParams:      activeNetParams,
+		Net:              netParams.Net,
 		DisableRelayTx:   true,
 
 		Listeners: peer.MessageListeners{
@@ -80,7 +81,7 @@ func creep() {
 				defer wg.Done()
 
 				host := net.JoinHostPort(ip.String(),
-					activeNetParams.DefaultPort)
+					netParams.DefaultPort)
 				p, err := peer.NewOutboundPeer(&config, host)
 				if err != nil {
 					log.Printf("NewOutboundPeer on %v: %v",
@@ -134,7 +135,7 @@ func main() {
 		os.Exit(1)
 	}
 	amgr, err = NewManager(filepath.Join(defaultHomeDir,
-		activeNetParams.Name))
+		cfg.netParams.Name))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NewManager: %v\n", err)
 		os.Exit(1)
@@ -143,7 +144,7 @@ func main() {
 	amgr.AddAddresses([]net.IP{net.ParseIP(cfg.Seeder)})
 
 	wg.Add(1)
-	go creep()
+	go creep(cfg.netParams)
 
 	dnsServer := NewDNSServer(cfg.Host, cfg.Nameserver, cfg.Listen)
 	go dnsServer.Start()
