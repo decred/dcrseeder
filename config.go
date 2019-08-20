@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/decred/dcrd/chaincfg"
-	"github.com/decred/dcrd/dcrutil"
+	"github.com/decred/dcrd/chaincfg/v2"
+	"github.com/decred/dcrd/dcrutil/v2"
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -22,9 +22,6 @@ const (
 )
 
 var (
-	// Default network parameters
-	activeNetParams = &chaincfg.MainNetParams
-
 	// Default configuration options
 	defaultConfigFile = filepath.Join(defaultHomeDir, defaultConfigFilename)
 	defaultHomeDir    = dcrutil.AppDataDir("dcrseeder", false)
@@ -39,6 +36,8 @@ type config struct {
 	Nameserver string `short:"n" long:"nameserver" description:"hostname of nameserver"`
 	Seeder     string `short:"s" long:"default seeder" description:"IP address of a  working node"`
 	TestNet    bool   `long:"testnet" description:"Use testnet"`
+
+	netParams *chaincfg.Params
 }
 
 func loadConfig() (*config, error) {
@@ -126,7 +125,9 @@ func loadConfig() (*config, error) {
 	cfg.Listen = normalizeAddress(cfg.Listen, defaultListenPort)
 
 	if cfg.TestNet {
-		activeNetParams = &chaincfg.TestNet3Params
+		cfg.netParams = chaincfg.TestNet3Params()
+	} else {
+		cfg.netParams = chaincfg.MainNetParams()
 	}
 
 	return &cfg, nil
