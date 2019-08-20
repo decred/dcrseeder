@@ -15,20 +15,23 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/wire"
+	"github.com/decred/dcrseeder/api"
 	"github.com/miekg/dns"
 )
 
 type Node struct {
-	IP          net.IP
-	Services    wire.ServiceFlag
-	LastAttempt time.Time
-	LastSuccess time.Time
-	LastSeen    time.Time
+	Services        wire.ServiceFlag
+	LastAttempt     time.Time
+	LastSuccess     time.Time
+	LastSeen        time.Time
+	ProtocolVersion uint32
+	IP              net.IP
 }
 
 type Manager struct {
 	mtx sync.RWMutex
 
+	port      string
 	nodes     map[string]*Node
 	wg        sync.WaitGroup
 	quit      chan struct{}
@@ -113,13 +116,14 @@ func isRoutable(addr net.IP) bool {
 	return true
 }
 
-func NewManager(dataDir string) (*Manager, error) {
+func NewManager(dataDir string, defaultPort string) (*Manager, error) {
 	err := os.MkdirAll(dataDir, 0700)
 	if err != nil {
 		return nil, err
 	}
 
 	amgr := Manager{
+		port:      defaultPort,
 		nodes:     make(map[string]*Node),
 		peersFile: filepath.Join(dataDir, peersFilename),
 		quit:      make(chan struct{}),
@@ -191,9 +195,53 @@ func (m *Manager) Addresses() []net.IP {
 	return addrs
 }
 
-// GoodAddresses returns good working IPs that match both the
+func (m *Manager) GoodAddresses(ipversion, pver uint32, services wire.ServiceFlag) []api.Node {
+	addrs := make([]api.Node, 0, defaultMaxAddresses)
+	i := defaultMaxAddresses
+
+	now := time.Now()
+	m.mtx.RLock()
+	for _, node := range m.nodes {
+		if i == 0 {
+			break
+		}
+
+		if node.LastSuccess.IsZero() ||
+			now.Sub(node.LastSuccess) > defaultStaleTimeout {
+			continue
+		}
+		switch ipversion {
+		case 4:
+			if node.IP.To4() == nil {
+				continue
+			}
+		case 6:
+			if node.IP.To4() != nil {
+				continue
+			}
+		}
+		if pver != 0 && node.ProtocolVersion != pver {
+			continue
+		}
+		if services != 0 && node.Services&services != services {
+			continue
+		}
+		addr := api.Node{
+			Host:            net.JoinHostPort(node.IP.String(), m.port),
+			Services:        uint64(node.Services),
+			ProtocolVersion: node.ProtocolVersion,
+		}
+		addrs = append(addrs, addr)
+		i--
+	}
+	m.mtx.RUnlock()
+
+	return addrs
+}
+
+// GoodDNSAddresses returns good working IPs that match both the
 // passed DNS query type and have the requested services.
-func (m *Manager) GoodAddresses(qtype uint16, services wire.ServiceFlag) []net.IP {
+func (m *Manager) GoodDNSAddresses(qtype uint16, services wire.ServiceFlag) []net.IP {
 	addrs := make([]net.IP, 0, defaultMaxAddresses)
 	i := defaultMaxAddresses
 
@@ -240,10 +288,11 @@ func (m *Manager) Attempt(ip net.IP) {
 	m.mtx.Unlock()
 }
 
-func (m *Manager) Good(ip net.IP, services wire.ServiceFlag) {
+func (m *Manager) Good(ip net.IP, services wire.ServiceFlag, pver uint32) {
 	m.mtx.Lock()
 	node, exists := m.nodes[ip.String()]
 	if exists {
+		node.ProtocolVersion = pver
 		node.Services = services
 		node.LastSuccess = time.Now()
 	}
