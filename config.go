@@ -53,10 +53,7 @@ func loadConfig() (*config, error) {
 			}
 		}
 
-		str := "failed to create home directory: %v"
-		err := fmt.Errorf(str, err)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, err
+		return nil, fmt.Errorf("failed to create home directory: %v", err)
 	}
 
 	// Default config.
@@ -102,31 +99,20 @@ func loadConfig() (*config, error) {
 	}
 
 	if len(cfg.Host) == 0 {
-		str := "Please specify a hostname"
-		err := fmt.Errorf(str)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, err
+		return nil, fmt.Errorf("Please specify a hostname")
 	}
 
 	if len(cfg.Nameserver) == 0 {
-		str := "Please specify a nameserver"
-		err := fmt.Errorf(str)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, err
+		return nil, fmt.Errorf("Please specify a nameserver")
 	}
 
 	if len(cfg.Seeder) == 0 {
-		str := "Please specify a seeder"
-		err := fmt.Errorf(str)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, err
+		return nil, fmt.Errorf("Please specify a seeder")
 	}
 
 	if net.ParseIP(cfg.Seeder) == nil {
 		str := "\"%s\" is not a valid textual representation of an IP address"
-		err := fmt.Errorf(str, cfg.Seeder)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, err
+		return nil, fmt.Errorf(str, cfg.Seeder)
 	}
 
 	cfg.Listen = normalizeAddress(cfg.Listen, defaultListenPort)
