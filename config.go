@@ -34,7 +34,7 @@ type config struct {
 	Host       string `short:"H" long:"host" description:"Seed DNS address"`
 	Listen     string `long:"listen" short:"l" description:"Listen on address:port"`
 	Nameserver string `short:"n" long:"nameserver" description:"hostname of nameserver"`
-	Seeder     string `short:"s" long:"default seeder" description:"IP address of a  working node"`
+	Seeder     string `short:"s" long:"default seeder" description:"IP address of a working node"`
 	TestNet    bool   `long:"testnet" description:"Use testnet"`
 
 	netParams *chaincfg.Params
@@ -118,6 +118,13 @@ func loadConfig() (*config, error) {
 	if len(cfg.Seeder) == 0 {
 		str := "Please specify a seeder"
 		err := fmt.Errorf(str)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, err
+	}
+
+	if net.ParseIP(cfg.Seeder) == nil {
+		str := "\"%s\" is not a valid textual representation of an IP address"
+		err := fmt.Errorf(str, cfg.Seeder)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, err
 	}

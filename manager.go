@@ -320,7 +320,7 @@ func (m *Manager) deserializePeers() error {
 	m.nodes = nodes
 	m.mtx.Unlock()
 
-	log.Printf("%d nodes loaded", l)
+	log.Printf("%d nodes loaded from %s", l, filePath)
 	return nil
 }
 
