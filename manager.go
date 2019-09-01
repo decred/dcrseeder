@@ -348,4 +348,6 @@ func (m *Manager) savePeers() {
 		log.Printf("Error writing file %s: %v", m.peersFile, err)
 		return
 	}
+
+	log.Printf("%d nodes saved to %s", len(m.nodes), m.peersFile)
 }
