@@ -1,5 +1,19 @@
-dcrseeder
-=========
+# dcrseeder
+
+dcrseeder is a crawler for the Decred network, which exposes a list of reliable
+nodes via a built-in DNS server.
+
+When dcrseeder is started for the first time, it will connect to the dcrd node
+specified with the `-s` flag and listen for `addr` messages. These messages
+contain the IPs of all peers known by the node. dcrseeder will then connect to
+each of these peers, listen for their `addr` messages, and continue to traverse
+the network in this fashion. dcrseeder maintains a list of all known peers and
+periodically checks that they are online and available. The list is stored on
+disk in a json file, so on subsequent start ups the dcrd node specified with
+`-s` does not need to be online.
+
+When dcrseeder is queried for node information, it responds with details of a
+random selection of the reliable nodes it knows about.
 
 ## Requirements
 
@@ -8,9 +22,9 @@ dcrseeder
 ## Getting Started
 
 - dcrseeder will now be installed in either ```$GOROOT/bin``` or
-  ```$GOPATH/bin``` depending on your configuration.  If you did not already
-  add the bin directory to your system path during Go installation, we
-  recommend you do so now.
+```$GOPATH/bin``` depending on your configuration.  If you did not already
+add the bin directory to your system path during Go installation, we
+recommend you do so now.
 
 ### Build from source (all platforms)
 
@@ -18,7 +32,7 @@ Building or updating from source requires the following build dependencies:
 
 - **Go 1.10 or 1.11**
 
-  Installation instructions can be found here: https://golang.org/doc/install.
+  Installation instructions can be found here: <https://golang.org/doc/install>.
   It is recommended to add `$GOPATH/bin` to your `PATH` at this point.
 
 - **Vgo (Go 1.10 only)**
@@ -46,7 +60,7 @@ our docs page at [docs.decred.org](https://docs.decred.org/getting-started/begin
 
 To start dcrseeder listening on udp 127.0.0.1:5354 with an initial connection to working testnet node 192.168.0.1:
 
-```
+```no-highlight
 $ ./dcrseeder -n nameserver.example.com -H network-seed.example.com -s 192.168.0.1 --testnet
 ```
 
