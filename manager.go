@@ -320,7 +320,7 @@ func (m *Manager) deserializePeers() error {
 	m.nodes = nodes
 	m.mtx.Unlock()
 
-	log.Printf("%d nodes loaded", l)
+	log.Printf("%d nodes loaded from %s", l, filePath)
 	return nil
 }
 
@@ -348,4 +348,6 @@ func (m *Manager) savePeers() {
 		log.Printf("Error writing file %s: %v", m.peersFile, err)
 		return
 	}
+
+	log.Printf("%d nodes saved to %s", len(m.nodes), m.peersFile)
 }
