@@ -8,5 +8,5 @@ require (
 	github.com/decred/dcrd/peer/v2 v2.0.0
 	github.com/decred/dcrd/wire v1.2.0
 	github.com/jessevdk/go-flags v1.4.0
-	github.com/miekg/dns v1.1.16
+	github.com/miekg/dns v1.1.17
 )
