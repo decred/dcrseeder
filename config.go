@@ -99,15 +99,15 @@ func loadConfig() (*config, error) {
 	}
 
 	if len(cfg.Host) == 0 {
-		return nil, fmt.Errorf("Please specify a hostname")
+		return nil, fmt.Errorf("no hostname specified")
 	}
 
 	if len(cfg.Nameserver) == 0 {
-		return nil, fmt.Errorf("Please specify a nameserver")
+		return nil, fmt.Errorf("no nameserver specified")
 	}
 
 	if len(cfg.Seeder) == 0 {
-		return nil, fmt.Errorf("Please specify a seeder")
+		return nil, fmt.Errorf("no seeder specified")
 	}
 
 	if net.ParseIP(cfg.Seeder) == nil {

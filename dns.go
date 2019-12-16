@@ -156,10 +156,10 @@ func (d *DNSServer) Start() {
 
 func NewDNSServer(hostname, nameserver, listen string) *DNSServer {
 	if hostname[len(hostname)-1] != '.' {
-		hostname = hostname + "."
+		hostname += "."
 	}
 	if nameserver[len(nameserver)-1] != '.' {
-		nameserver = nameserver + "."
+		nameserver += "."
 	}
 
 	return &DNSServer{
