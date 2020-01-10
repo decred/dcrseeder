@@ -54,7 +54,7 @@ func (d *DNSServer) Start() {
 
 		go func() {
 			dnsMsg := new(dns.Msg)
-			err = dnsMsg.Unpack(b[:])
+			err = dnsMsg.Unpack(b)
 			if err != nil {
 				log.Printf("%s: invalid dns message: %v",
 					addr, err)
@@ -109,7 +109,7 @@ func (d *DNSServer) Start() {
 
 			if qtype != dns.TypeNS {
 				respMsg.Ns = append(respMsg.Ns, authority)
-				ips := amgr.GoodAddresses(qtype, wantedSF)
+				ips := amgr.GoodDNSAddresses(qtype, wantedSF)
 				for _, ip := range ips {
 					rr = fmt.Sprintf("%s 30 IN %s %s",
 						dnsMsg.Question[0].Name, atype,
@@ -156,10 +156,10 @@ func (d *DNSServer) Start() {
 
 func NewDNSServer(hostname, nameserver, listen string) *DNSServer {
 	if hostname[len(hostname)-1] != '.' {
-		hostname = hostname + "."
+		hostname += "."
 	}
 	if nameserver[len(nameserver)-1] != '.' {
-		nameserver = nameserver + "."
+		nameserver += "."
 	}
 
 	return &DNSServer{

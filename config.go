@@ -18,7 +18,8 @@ import (
 
 const (
 	defaultConfigFilename = "dcrseeder.conf"
-	defaultListenPort     = "5354"
+	defaultDNSPort        = "5354"
+	defaultHTTPPort       = "8000"
 )
 
 var (
@@ -32,7 +33,8 @@ var (
 // See loadConfig for details on the configuration load process.
 type config struct {
 	Host       string `short:"H" long:"host" description:"Seed DNS address"`
-	Listen     string `long:"listen" short:"l" description:"Listen on address:port"`
+	DNSListen  string `long:"dnslisten" description:"DNS listen on address:port"`
+	HTTPListen string `long:"httplisten" description:"HTTP listen on address:port"`
 	Nameserver string `short:"n" long:"nameserver" description:"hostname of nameserver"`
 	Seeder     string `short:"s" long:"default seeder" description:"IP address of a working node"`
 	TestNet    bool   `long:"testnet" description:"Use testnet"`
@@ -57,9 +59,7 @@ func loadConfig() (*config, error) {
 	}
 
 	// Default config.
-	cfg := config{
-		Listen: normalizeAddress("localhost", defaultListenPort),
-	}
+	cfg := config{}
 
 	preCfg := cfg
 	preParser := flags.NewParser(&preCfg, flags.Default)
@@ -98,16 +98,8 @@ func loadConfig() (*config, error) {
 		return nil, err
 	}
 
-	if len(cfg.Host) == 0 {
-		return nil, fmt.Errorf("Please specify a hostname")
-	}
-
-	if len(cfg.Nameserver) == 0 {
-		return nil, fmt.Errorf("Please specify a nameserver")
-	}
-
 	if len(cfg.Seeder) == 0 {
-		return nil, fmt.Errorf("Please specify a seeder")
+		return nil, fmt.Errorf("no seeder specified")
 	}
 
 	if net.ParseIP(cfg.Seeder) == nil {
@@ -115,7 +107,23 @@ func loadConfig() (*config, error) {
 		return nil, fmt.Errorf(str, cfg.Seeder)
 	}
 
-	cfg.Listen = normalizeAddress(cfg.Listen, defaultListenPort)
+	if cfg.DNSListen == "" && cfg.HTTPListen == "" {
+		return nil, fmt.Errorf("no listeners specified")
+	}
+	if cfg.DNSListen != "" {
+		if len(cfg.Host) == 0 {
+			return nil, fmt.Errorf("no hostname specified")
+		}
+
+		if len(cfg.Nameserver) == 0 {
+			return nil, fmt.Errorf("no nameserver specified")
+		}
+
+		cfg.DNSListen = normalizeAddress(cfg.DNSListen, defaultDNSPort)
+	}
+	if cfg.HTTPListen != "" {
+		cfg.HTTPListen = normalizeAddress(cfg.HTTPListen, defaultHTTPPort)
+	}
 
 	if cfg.TestNet {
 		cfg.netParams = chaincfg.TestNet3Params()

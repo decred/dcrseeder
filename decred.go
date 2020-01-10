@@ -56,8 +56,8 @@ func creep(netParams *chaincfg.Params) {
 				onaddr <- struct{}{}
 			},
 			OnVerAck: func(p *peer.Peer, msg *wire.MsgVerAck) {
-				log.Printf("Adding peer %v with services %v",
-					p.NA().IP.String(), p.Services())
+				log.Printf("Adding peer %v with services %v pver %d",
+					p.NA().IP.String(), p.Services(), p.ProtocolVersion())
 
 				verack <- struct{}{}
 			},
@@ -101,7 +101,7 @@ func creep(netParams *chaincfg.Params) {
 				select {
 				case <-verack:
 					// Mark this peer as a good node.
-					amgr.Good(p.NA().IP, p.Services())
+					amgr.Good(p.NA().IP, p.Services(), p.ProtocolVersion())
 
 					// Ask peer for some addresses.
 					p.QueueMessage(wire.NewMsgGetAddr(), nil)
@@ -135,7 +135,7 @@ func main() {
 		os.Exit(1)
 	}
 	amgr, err = NewManager(filepath.Join(defaultHomeDir,
-		cfg.netParams.Name))
+		cfg.netParams.Name), cfg.netParams.DefaultPort)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NewManager: %v\n", err)
 		os.Exit(1)
@@ -146,8 +146,14 @@ func main() {
 	wg.Add(1)
 	go creep(cfg.netParams)
 
-	dnsServer := NewDNSServer(cfg.Host, cfg.Nameserver, cfg.Listen)
-	go dnsServer.Start()
+	if cfg.HTTPListen != "" {
+		go httpServer(cfg.HTTPListen)
+	}
+
+	if cfg.DNSListen != "" {
+		dnsServer := NewDNSServer(cfg.Host, cfg.Nameserver, cfg.DNSListen)
+		go dnsServer.Start()
+	}
 
 	wg.Wait()
 }
