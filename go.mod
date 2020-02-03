@@ -1,6 +1,6 @@
 module github.com/decred/dcrseeder
 
-go 1.12
+go 1.13
 
 require (
 	github.com/decred/dcrd/chaincfg/v2 v2.3.0

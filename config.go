@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -32,10 +33,10 @@ var (
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	Host       string `short:"H" long:"host" description:"Seed DNS address"`
-	DNSListen  string `long:"dnslisten" description:"DNS listen on address:port"`
+	Host       string `short:"H" long:"host" description:"DEPRECATED: Seed DNS address"`
+	DNSListen  string `long:"dnslisten" description:"DEPRECATED: DNS listen on address:port"`
 	HTTPListen string `long:"httplisten" description:"HTTP listen on address:port"`
-	Nameserver string `short:"n" long:"nameserver" description:"hostname of nameserver"`
+	Nameserver string `short:"n" long:"nameserver" description:"DEPCREATED: hostname of nameserver"`
 	Seeder     string `short:"s" long:"default seeder" description:"IP address of a working node"`
 	TestNet    bool   `long:"testnet" description:"Use testnet"`
 
@@ -48,7 +49,8 @@ func loadConfig() (*config, error) {
 		// Show a nicer error message if it's because a symlink is
 		// linked to a directory that does not exist (probably because
 		// it's not mounted).
-		if e, ok := err.(*os.PathError); ok && os.IsExist(err) {
+		var e *os.PathError
+		if errors.As(err, &e) && os.IsExist(err) {
 			if link, lerr := os.Readlink(e.Path); lerr == nil {
 				str := "is symlink %s -> %s mounted?"
 				err = fmt.Errorf(str, e.Path, link)
@@ -65,8 +67,8 @@ func loadConfig() (*config, error) {
 	preParser := flags.NewParser(&preCfg, flags.Default)
 	_, err = preParser.Parse()
 	if err != nil {
-		e, ok := err.(*flags.Error)
-		if ok && e.Type == flags.ErrHelp {
+		var e *flags.Error
+		if errors.As(err, &e) && e.Type == flags.ErrHelp {
 			os.Exit(0)
 		}
 		preParser.WriteHelp(os.Stderr)
@@ -81,7 +83,8 @@ func loadConfig() (*config, error) {
 	parser := flags.NewParser(&cfg, flags.Default)
 	err = flags.NewIniParser(parser).ParseFile(defaultConfigFile)
 	if err != nil {
-		if _, ok := err.(*os.PathError); !ok {
+		var e *os.PathError
+		if !errors.As(err, &e) {
 			fmt.Fprintf(os.Stderr, "Error parsing config "+
 				"file: %v\n", err)
 			fmt.Fprintln(os.Stderr, usageMessage)
@@ -92,7 +95,8 @@ func loadConfig() (*config, error) {
 	// Parse command line options again to ensure they take precedence.
 	_, err = parser.Parse()
 	if err != nil {
-		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
+		var e *flags.Error
+		if !errors.As(err, &e) || e.Type != flags.ErrHelp {
 			parser.WriteHelp(os.Stderr)
 		}
 		return nil, err
@@ -111,6 +115,7 @@ func loadConfig() (*config, error) {
 		return nil, fmt.Errorf("no listeners specified")
 	}
 	if cfg.DNSListen != "" {
+		fmt.Fprintln(os.Stderr, "The --dnslisten option is deprecated: use --httplisten")
 		if len(cfg.Host) == 0 {
 			return nil, fmt.Errorf("no hostname specified")
 		}
