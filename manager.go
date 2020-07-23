@@ -220,7 +220,7 @@ func (m *Manager) GoodAddresses(ipversion, pver uint32, services wire.ServiceFla
 				continue
 			}
 		}
-		if pver != 0 && node.ProtocolVersion != pver {
+		if pver != 0 && node.ProtocolVersion < pver {
 			continue
 		}
 		if services != 0 && node.Services&services != services {
