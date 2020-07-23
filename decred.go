@@ -39,7 +39,7 @@ func creep(netParams *chaincfg.Params) {
 	onaddr := make(chan struct{})
 	verack := make(chan struct{})
 	config := peer.Config{
-		UserAgentName:    "dcrpeersniffer",
+		UserAgentName:    "dcrseeder",
 		UserAgentVersion: "0.0.1",
 		Net:              netParams.Net,
 		DisableRelayTx:   true,
