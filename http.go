@@ -41,11 +41,6 @@ func httpGetAddrs(w http.ResponseWriter, r *http.Request) {
 
 	nodes := amgr.GoodAddresses(wantedIP, wantedPV, wantedSF)
 
-	cn, ok := w.(http.CloseNotifier)
-	if !ok {
-		http.NotFound(w, r)
-		return
-	}
 	flush, ok := w.(http.Flusher)
 	if !ok {
 		http.NotFound(w, r)
@@ -58,9 +53,10 @@ func httpGetAddrs(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 
+	ctx := r.Context()
 	for _, node := range nodes {
 		select {
-		case <-cn.CloseNotify():
+		case <-ctx.Done():
 			log.Printf("client close connection")
 			return
 		default:
