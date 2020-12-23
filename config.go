@@ -29,14 +29,14 @@ var (
 	defaultHomeDir    = dcrutil.AppDataDir("dcrseeder", false)
 )
 
-// config defines the configuration options for hardforkdemo.
+// config defines the configuration options for dcrseeder.
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
 	Host       string `short:"H" long:"host" description:"DEPRECATED: Seed DNS address"`
 	DNSListen  string `long:"dnslisten" description:"DEPRECATED: DNS listen on address:port"`
 	HTTPListen string `long:"httplisten" description:"HTTP listen on address:port"`
-	Nameserver string `short:"n" long:"nameserver" description:"DEPCREATED: hostname of nameserver"`
+	Nameserver string `short:"n" long:"nameserver" description:"DEPRECATED: hostname of nameserver"`
 	Seeder     string `short:"s" long:"default seeder" description:"IP address of a working node"`
 	TestNet    bool   `long:"testnet" description:"Use testnet"`
 

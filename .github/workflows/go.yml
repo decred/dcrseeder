@@ -26,4 +26,4 @@ jobs:
         env:
           GO111MODULE: "on"
         run: |
-          sh ./goclean.sh
+          sh ./run_tests.sh
