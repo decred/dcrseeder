@@ -24,23 +24,20 @@ random selection of the reliable nodes it knows about.
 
 ## Requirements
 
-[Go](https://golang.org) 1.12 or newer.
+[Go](https://golang.org) 1.14 or newer.
 
 ### Getting Started
 
 To build and install from a checked-out repo, run `go install` in the repo's
 root directory.
 
-To start dcrseeder listening on udp 127.0.0.1:5354 with an initial connection to working testnet node 192.168.0.1:
+To start dcrseeder listening on localhost:8000 with an initial connection to working testnet node 192.168.0.1:
 
 ```no-highlight
 $ ./dcrseeder -s 192.168.0.1 --testnet --httplisten=localhost:8000
 ```
 
 You will then need to redirect HTTPS traffic on your public IP to localhost:8000
-
-For more information about Decred and how to set up your software please go to
-our docs page at [docs.decred.org](https://docs.decred.org/getting-started/beginner-guide/).
 
 ## Issue Tracker
 

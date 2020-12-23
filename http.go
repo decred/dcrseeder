@@ -8,8 +8,6 @@ import (
 
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrseeder/api"
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 )
 
 func httpGetAddrs(w http.ResponseWriter, r *http.Request) {
@@ -71,12 +69,6 @@ func httpGetAddrs(w http.ResponseWriter, r *http.Request) {
 }
 
 func httpServer(listener string) {
-	router := mux.NewRouter()
-	router.HandleFunc(api.GetAddrsPath,
-		httpGetAddrs).Methods(http.MethodGet, http.MethodHead, http.MethodOptions)
-
-	origins := handlers.AllowedOrigins([]string{"*"})
-	methods := handlers.AllowedMethods([]string{http.MethodGet, http.MethodHead, http.MethodOptions})
-
-	log.Fatal(http.ListenAndServe(listener, handlers.CORS(origins, methods)(router)))
+	http.HandleFunc(api.GetAddrsPath, httpGetAddrs)
+	log.Fatal(http.ListenAndServe(listener, nil))
 }
