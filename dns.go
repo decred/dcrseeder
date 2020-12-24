@@ -22,8 +22,6 @@ type DNSServer struct {
 }
 
 func (d *DNSServer) Start() {
-	defer wg.Done()
-
 	rr := fmt.Sprintf("%s 86400 IN NS %s", d.hostname, d.nameserver)
 	authority, err := dns.NewRR(rr)
 	if err != nil {

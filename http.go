@@ -5,14 +5,22 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrseeder/api"
 )
+
+const defaultHTTPTimeout = 10 * time.Second
 
 func httpGetAddrs(w http.ResponseWriter, r *http.Request) {
 	var wantedIP uint32
@@ -73,7 +81,39 @@ func httpGetAddrs(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func httpServer(listener string) {
-	http.HandleFunc(api.GetAddrsPath, httpGetAddrs)
-	log.Fatal(http.ListenAndServe(listener, nil))
+func serveHTTP(ctx context.Context, addr string) error {
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("can't listen on %s. web server quitting: %w", addr, err)
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(api.GetAddrsPath, httpGetAddrs)
+
+	srv := &http.Server{
+		Handler:      mux,
+		ReadTimeout:  defaultHTTPTimeout, // slow requests should not hold connections opened
+		WriteTimeout: defaultHTTPTimeout, // request to response time
+	}
+
+	// Shutdown the server on context cancellation.
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-ctx.Done()
+		ctxShutdown, cancel := context.WithTimeout(context.Background(), defaultHTTPTimeout)
+		defer cancel()
+		err := srv.Shutdown(ctxShutdown)
+		if err != nil {
+			log.Printf("Trouble shutting down HTTP server: %v", err)
+		}
+	}()
+	defer wg.Wait()
+
+	err = srv.Serve(listener) // blocking
+	if !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("unexpected (http.Server).Serve error: %w", err)
+	}
+	return nil // Shutdown called
 }
