@@ -1,12 +1,8 @@
 #!/bin/bash
-# The script does automatic checking on a Go package and its sub-packages, including:
-# 1. gofmt         (http://golang.org/cmd/gofmt/)
-# 2. go vet        (http://golang.org/cmd/vet)
-# 3. gosimple      (https://github.com/dominikh/go-simple)
-# 4. unconvert     (https://github.com/mdempsky/unconvert)
-# 5. ineffassign   (https://github.com/gordonklaus/ineffassign)
-# 6. race detector (http://blog.golang.org/race-detector)
-# 7. test coverage (http://blog.golang.org/cover)
+# The script does the following automatic checking on a Go package and its sub-packages:
+# 1. go mod tidiness
+# 2. unit tests
+# 3. linting (github.com/golangci/golangci-lint)
 
 set -ex
 

@@ -1,3 +1,7 @@
+// Copyright (c) 2020 The Decred developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
@@ -45,7 +49,10 @@ func httpGetAddrs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Transfer-Encoding", "chunked")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8") // not a json array
+	// Replace the Server response header. When used with nginx's "server_tokens
+	// off;" and "proxy_pass_header Server;" options.
+	w.Header().Set("Server", appName)
 	w.WriteHeader(http.StatusOK)
 	flush.Flush()
 
@@ -55,13 +62,11 @@ func httpGetAddrs(w http.ResponseWriter, r *http.Request) {
 	for _, node := range nodes {
 		select {
 		case <-ctx.Done():
-			log.Printf("client close connection")
 			return
 		default:
 			err := enc.Encode(node)
 			if err != nil {
-				log.Printf("httpGetAddrs: Encode failed: %v",
-					err)
+				log.Printf("httpGetAddrs: Encode failed: %v", err)
 			}
 			flush.Flush()
 		}

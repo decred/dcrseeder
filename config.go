@@ -1,4 +1,4 @@
-// Copyright (c) 2018 The Decred developers
+// Copyright (c) 2020 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	defaultConfigFilename = "dcrseeder.conf"
+	appName               = "dcrseeder"
+	defaultConfigFilename = appName + ".conf"
 	defaultDNSPort        = "5354"
 	defaultHTTPPort       = "8000"
 )
@@ -26,7 +27,7 @@ const (
 var (
 	// Default configuration options
 	defaultConfigFile = filepath.Join(defaultHomeDir, defaultConfigFilename)
-	defaultHomeDir    = dcrutil.AppDataDir("dcrseeder", false)
+	defaultHomeDir    = dcrutil.AppDataDir(appName, false)
 )
 
 // config defines the configuration options for dcrseeder.
