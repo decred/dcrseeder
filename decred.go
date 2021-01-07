@@ -30,12 +30,80 @@ const (
 
 var amgr *Manager
 
+func testPeer(ctx context.Context, ip net.IP, netParams *chaincfg.Params) {
+	onaddr := make(chan struct{}, 1)
+	verack := make(chan struct{}, 1)
+	config := peer.Config{
+		UserAgentName:    appName,
+		UserAgentVersion: "0.0.1",
+		Net:              netParams.Net,
+		DisableRelayTx:   true,
+
+		Listeners: peer.MessageListeners{
+			OnAddr: func(p *peer.Peer, msg *wire.MsgAddr) {
+				n := make([]net.IP, 0, len(msg.AddrList))
+				for _, addr := range msg.AddrList {
+					n = append(n, addr.IP)
+				}
+				added := amgr.AddAddresses(n)
+				log.Printf("Peer %v sent %v addresses, %d new",
+					p.Addr(), len(msg.AddrList), added)
+				onaddr <- struct{}{}
+			},
+			OnVerAck: func(p *peer.Peer, msg *wire.MsgVerAck) {
+				log.Printf("Adding peer %v with services %v pver %d",
+					p.NA().IP.String(), p.Services(), p.ProtocolVersion())
+				verack <- struct{}{}
+			},
+		},
+	}
+
+	host := net.JoinHostPort(ip.String(), netParams.DefaultPort)
+	p, err := peer.NewOutboundPeer(&config, host)
+	if err != nil {
+		log.Printf("NewOutboundPeer on %v: %v", host, err)
+		return
+	}
+
+	amgr.Attempt(ip)
+	ctxTimeout, cancel := context.WithTimeout(ctx, defaultNodeTimeout)
+	defer cancel()
+	var dialer net.Dialer
+	conn, err := dialer.DialContext(ctxTimeout, "tcp", p.Addr())
+	if err != nil {
+		return
+	}
+	p.AssociateConnection(conn)
+	defer p.Disconnect()
+
+	// Wait for the verack message or timeout in case of failure.
+	select {
+	case <-verack:
+		// Mark this peer as a good node.
+		amgr.Good(p.NA().IP, p.Services(), p.ProtocolVersion())
+
+		// Ask peer for some addresses.
+		p.QueueMessage(wire.NewMsgGetAddr(), nil)
+
+	case <-time.After(defaultNodeTimeout):
+		log.Printf("verack timeout on peer %v", p.Addr())
+		return
+	case <-ctx.Done():
+		return
+	}
+
+	select {
+	case <-onaddr:
+	case <-time.After(defaultNodeTimeout):
+		log.Printf("getaddr timeout on peer %v", p.Addr())
+	case <-ctx.Done():
+	}
+}
+
 func creep(ctx context.Context, netParams *chaincfg.Params) {
 	for {
-		select {
-		case <-ctx.Done():
+		if ctx.Err() != nil {
 			return
-		default:
 		}
 
 		ips := amgr.Addresses()
@@ -51,79 +119,10 @@ func creep(ctx context.Context, netParams *chaincfg.Params) {
 
 		var wg sync.WaitGroup
 		wg.Add(len(ips))
-
 		for _, ip := range ips {
-			onaddr := make(chan struct{}, 1)
-			verack := make(chan struct{}, 1)
-			config := peer.Config{
-				UserAgentName:    appName,
-				UserAgentVersion: "0.0.1",
-				Net:              netParams.Net,
-				DisableRelayTx:   true,
-
-				Listeners: peer.MessageListeners{
-					OnAddr: func(p *peer.Peer, msg *wire.MsgAddr) {
-						n := make([]net.IP, 0, len(msg.AddrList))
-						for _, addr := range msg.AddrList {
-							n = append(n, addr.IP)
-						}
-						added := amgr.AddAddresses(n)
-						log.Printf("Peer %v sent %v addresses, %d new",
-							p.Addr(), len(msg.AddrList), added)
-						onaddr <- struct{}{}
-					},
-					OnVerAck: func(p *peer.Peer, msg *wire.MsgVerAck) {
-						log.Printf("Adding peer %v with services %v pver %d",
-							p.NA().IP.String(), p.Services(), p.ProtocolVersion())
-
-						verack <- struct{}{}
-					},
-				},
-			}
-
 			go func(ip net.IP) {
 				defer wg.Done()
-
-				host := net.JoinHostPort(ip.String(), netParams.DefaultPort)
-				p, err := peer.NewOutboundPeer(&config, host)
-				if err != nil {
-					log.Printf("NewOutboundPeer on %v: %v", host, err)
-					return
-				}
-
-				amgr.Attempt(ip)
-				ctxTimeout, cancel := context.WithTimeout(ctx, defaultNodeTimeout)
-				defer cancel()
-				var dialer net.Dialer
-				conn, err := dialer.DialContext(ctxTimeout, "tcp", p.Addr())
-				if err != nil {
-					return
-				}
-				p.AssociateConnection(conn)
-				defer p.Disconnect()
-
-				// Wait for the verack message or timeout in case of failure.
-				select {
-				case <-verack:
-					// Mark this peer as a good node.
-					amgr.Good(p.NA().IP, p.Services(), p.ProtocolVersion())
-
-					// Ask peer for some addresses.
-					p.QueueMessage(wire.NewMsgGetAddr(), nil)
-
-				case <-time.After(defaultNodeTimeout):
-					log.Printf("verack timeout on peer %v", p.Addr())
-					return
-				case <-ctx.Done():
-					return
-				}
-
-				select {
-				case <-onaddr:
-				case <-time.After(defaultNodeTimeout):
-					log.Printf("getaddr timeout on peer %v", p.Addr())
-				case <-ctx.Done():
-				}
+				testPeer(ctx, ip, netParams)
 			}(ip)
 		}
 		wg.Wait()
