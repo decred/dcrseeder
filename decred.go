@@ -36,34 +36,6 @@ var (
 func creep(netParams *chaincfg.Params) {
 	defer wg.Done()
 
-	onaddr := make(chan struct{})
-	verack := make(chan struct{})
-	config := peer.Config{
-		UserAgentName:    "dcrseeder",
-		UserAgentVersion: "0.0.1",
-		Net:              netParams.Net,
-		DisableRelayTx:   true,
-
-		Listeners: peer.MessageListeners{
-			OnAddr: func(p *peer.Peer, msg *wire.MsgAddr) {
-				n := make([]net.IP, 0, len(msg.AddrList))
-				for _, addr := range msg.AddrList {
-					n = append(n, addr.IP)
-				}
-				added := amgr.AddAddresses(n)
-				log.Printf("Peer %v sent %v addresses, %d new",
-					p.Addr(), len(msg.AddrList), added)
-				onaddr <- struct{}{}
-			},
-			OnVerAck: func(p *peer.Peer, msg *wire.MsgVerAck) {
-				log.Printf("Adding peer %v with services %v pver %d",
-					p.NA().IP.String(), p.Services(), p.ProtocolVersion())
-
-				verack <- struct{}{}
-			},
-		},
-	}
-
 	var wg sync.WaitGroup
 	for {
 		ips := amgr.Addresses()
@@ -77,6 +49,35 @@ func creep(netParams *chaincfg.Params) {
 		wg.Add(len(ips))
 
 		for _, ip := range ips {
+
+			onaddr := make(chan struct{})
+			verack := make(chan struct{})
+			config := peer.Config{
+				UserAgentName:    "dcrseeder",
+				UserAgentVersion: "0.0.1",
+				Net:              netParams.Net,
+				DisableRelayTx:   true,
+
+				Listeners: peer.MessageListeners{
+					OnAddr: func(p *peer.Peer, msg *wire.MsgAddr) {
+						n := make([]net.IP, 0, len(msg.AddrList))
+						for _, addr := range msg.AddrList {
+							n = append(n, addr.IP)
+						}
+						added := amgr.AddAddresses(n)
+						log.Printf("Peer %v sent %v addresses, %d new",
+							p.Addr(), len(msg.AddrList), added)
+						onaddr <- struct{}{}
+					},
+					OnVerAck: func(p *peer.Peer, msg *wire.MsgVerAck) {
+						log.Printf("Adding peer %v with services %v pver %d",
+							p.NA().IP.String(), p.Services(), p.ProtocolVersion())
+
+						verack <- struct{}{}
+					},
+				},
+			}
+
 			go func(ip net.IP) {
 				defer wg.Done()
 
