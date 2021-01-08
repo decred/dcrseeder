@@ -1,4 +1,4 @@
-// Copyright (c) 2020 The Decred developers
+// Copyright (c) 2018-2021 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/decred/dcrd/chaincfg/v3"
@@ -146,7 +147,7 @@ func main() {
 
 	ctx, shutdown := context.WithCancel(context.Background())
 	killSwitch := make(chan os.Signal, 1)
-	signal.Notify(killSwitch, os.Interrupt)
+	signal.Notify(killSwitch, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-killSwitch
 		log.Print("Shutting down...")

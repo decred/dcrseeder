@@ -1,4 +1,4 @@
-// Copyright (c) 2020 The Decred developers
+// Copyright (c) 2018-2021 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -48,7 +48,7 @@ const (
 
 	// dumpAddressInterval is the interval used to dump the address
 	// cache to disk for future use.
-	dumpAddressInterval = time.Second * 30
+	dumpAddressInterval = time.Minute * 5
 
 	// peersFilename is the name of the file.
 	peersFilename = "nodes.json"
