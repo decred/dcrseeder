@@ -1,4 +1,4 @@
-// Copyright (c) 2018 The Decred developers
+// Copyright (c) 2018-2021 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -50,7 +50,7 @@ const (
 
 	// dumpAddressInterval is the interval used to dump the address
 	// cache to disk for future use.
-	dumpAddressInterval = time.Second * 30
+	dumpAddressInterval = time.Minute * 5
 
 	// peersFilename is the name of the file.
 	peersFilename = "nodes.json"
@@ -88,9 +88,16 @@ func NewManager(dataDir string, defaultPort string) (*Manager, error) {
 		}
 	}
 
+	amgr.wg.Add(1)
 	go amgr.addressHandler()
 
 	return &amgr, nil
+}
+
+func (m *Manager) Stop() {
+	close(m.quit)
+	m.wg.Wait() // wait for addressHandler
+	log.Print("Address manager done.")
 }
 
 func (m *Manager) AddAddresses(addrs []net.IP) int {
@@ -250,6 +257,7 @@ func (m *Manager) Good(ip net.IP, services wire.ServiceFlag, pver uint32) {
 // addressHandler is the main handler for the address manager.  It must be run
 // as a goroutine.
 func (m *Manager) addressHandler() {
+	defer m.wg.Done()
 	pruneAddressTicker := time.NewTicker(pruneAddressInterval)
 	defer pruneAddressTicker.Stop()
 	dumpAddressTicker := time.NewTicker(dumpAddressInterval)
@@ -266,7 +274,6 @@ out:
 		}
 	}
 	m.savePeers()
-	m.wg.Done()
 }
 
 func (m *Manager) prunePeers() {

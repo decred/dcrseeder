@@ -1,4 +1,4 @@
-// Copyright (c) 2018 The Decred developers
+// Copyright (c) 2018-2021 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -22,8 +22,6 @@ type DNSServer struct {
 }
 
 func (d *DNSServer) Start() {
-	defer wg.Done()
-
 	rr := fmt.Sprintf("%s 86400 IN NS %s", d.hostname, d.nameserver)
 	authority, err := dns.NewRR(rr)
 	if err != nil {
