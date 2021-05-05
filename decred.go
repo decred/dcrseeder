@@ -147,7 +147,7 @@ func main() {
 
 	ctx, shutdown := context.WithCancel(context.Background())
 	killSwitch := make(chan os.Signal, 1)
-	signal.Notify(killSwitch, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(killSwitch, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	go func() {
 		<-killSwitch
 		log.Print("Shutting down...")
