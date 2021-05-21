@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/wire"
-	"github.com/decred/dcrseeder/api"
 	"github.com/miekg/dns"
 )
 
@@ -150,8 +149,8 @@ func (m *Manager) Addresses() []net.IP {
 	return addrs
 }
 
-func (m *Manager) GoodAddresses(ipversion, pver uint32, services wire.ServiceFlag) []api.Node {
-	addrs := make([]api.Node, 0, defaultMaxAddresses)
+func (m *Manager) GoodAddresses(ipversion, pver uint32, services wire.ServiceFlag) []apiNode {
+	addrs := make([]apiNode, 0, defaultMaxAddresses)
 	i := defaultMaxAddresses
 
 	now := time.Now()
@@ -181,7 +180,7 @@ func (m *Manager) GoodAddresses(ipversion, pver uint32, services wire.ServiceFla
 		if services != 0 && node.Services&services != services {
 			continue
 		}
-		addr := api.Node{
+		addr := apiNode{
 			Host:            net.JoinHostPort(node.IP.String(), m.port),
 			Services:        uint64(node.Services),
 			ProtocolVersion: node.ProtocolVersion,

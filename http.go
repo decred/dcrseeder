@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/wire"
-	"github.com/decred/dcrseeder/api"
 )
 
 const defaultHTTPTimeout = 10 * time.Second
@@ -29,7 +28,7 @@ func httpGetAddrs(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 
-	requestedIP := query.Get(api.IPVersion)
+	requestedIP := query.Get(ipVersion)
 	if requestedIP != "" {
 		u, _ := strconv.ParseUint(requestedIP, 10, 32)
 		if u == 4 || u == 6 {
@@ -37,13 +36,13 @@ func httpGetAddrs(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	requestedPV := query.Get(api.ProtocolVersion)
+	requestedPV := query.Get(protocolVersion)
 	if requestedPV != "" {
 		u, _ := strconv.ParseUint(requestedPV, 10, 32)
 		wantedPV = uint32(u)
 	}
 
-	requestedSF := query.Get(api.ServiceFlag)
+	requestedSF := query.Get(serviceFlag)
 	if requestedSF != "" {
 		u, _ := strconv.ParseUint(requestedSF, 10, 64)
 		wantedSF = wire.ServiceFlag(u)
@@ -88,7 +87,7 @@ func serveHTTP(ctx context.Context, addr string) error {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc(api.GetAddrsPath, httpGetAddrs)
+	mux.HandleFunc(GetAddrsPath, httpGetAddrs)
 
 	srv := &http.Server{
 		Handler:      mux,
