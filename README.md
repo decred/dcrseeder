@@ -24,7 +24,7 @@ random selection of the reliable nodes it knows about.
 
 ## Requirements
 
-[Go](https://golang.org) 1.14 or newer.
+[Go](https://golang.org) 1.16 or newer.
 
 ### Getting Started
 
