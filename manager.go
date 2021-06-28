@@ -118,6 +118,7 @@ func (m *Manager) AddAddresses(addrs []net.IP) int {
 		node := Node{
 			IP:       addr,
 			LastSeen: time.Now(),
+			// LastSuccess and LastAttempt are zero until Good flags them
 		}
 		m.nodes[addrStr] = &node
 		count++
@@ -286,8 +287,7 @@ func (m *Manager) prunePeers() {
 			count++
 			continue
 		}
-		if !node.LastSuccess.IsZero() &&
-			now.Sub(node.LastSuccess) > pruneExpireTimeout {
+		if now.Sub(node.LastSuccess) > pruneExpireTimeout {
 			delete(m.nodes, k)
 			count++
 			continue
