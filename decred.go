@@ -66,7 +66,10 @@ func testPeer(ctx context.Context, ip net.IP, netParams *chaincfg.Params) {
 		return
 	}
 
-	amgr.Attempt(ip)
+	// Time stamp the attempt after disconnect or dial error so we don't prune
+	// this peer before or during its test.
+	defer amgr.Attempt(ip)
+
 	ctxTimeout, cancel := context.WithTimeout(ctx, defaultNodeTimeout)
 	defer cancel()
 	var dialer net.Dialer
