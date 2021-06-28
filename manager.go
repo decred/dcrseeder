@@ -287,7 +287,8 @@ func (m *Manager) prunePeers() {
 			count++
 			continue
 		}
-		if now.Sub(node.LastSuccess) > pruneExpireTimeout {
+		if !node.LastAttempt.IsZero() &&
+			now.Sub(node.LastSuccess) > pruneExpireTimeout {
 			delete(m.nodes, k)
 			count++
 			continue
