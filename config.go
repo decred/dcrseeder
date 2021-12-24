@@ -20,7 +20,6 @@ import (
 const (
 	appName               = "dcrseeder"
 	defaultConfigFilename = appName + ".conf"
-	defaultDNSPort        = "5354"
 	defaultHTTPPort       = "8000"
 )
 
@@ -34,12 +33,9 @@ var (
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	Host       string `short:"H" long:"host" description:"DEPRECATED: Seed DNS address"`
-	DNSListen  string `long:"dnslisten" description:"DEPRECATED: DNS listen on address:port"`
-	HTTPListen string `long:"httplisten" description:"HTTP listen on address:port"`
-	Nameserver string `short:"n" long:"nameserver" description:"DEPRECATED: hostname of nameserver"`
-	Seeder     string `short:"s" long:"default seeder" description:"IP address of a working node"`
-	TestNet    bool   `long:"testnet" description:"Use testnet"`
+	Listen  string `long:"httplisten" description:"HTTP listen on address:port"`
+	Seeder  string `short:"s" long:"default seeder" description:"IP address of a working node"`
+	TestNet bool   `long:"testnet" description:"Use testnet"`
 
 	netParams *chaincfg.Params
 }
@@ -112,24 +108,10 @@ func loadConfig() (*config, error) {
 		return nil, fmt.Errorf(str, cfg.Seeder)
 	}
 
-	if cfg.DNSListen == "" && cfg.HTTPListen == "" {
+	if cfg.Listen == "" {
 		return nil, fmt.Errorf("no listeners specified")
 	}
-	if cfg.DNSListen != "" {
-		fmt.Fprintln(os.Stderr, "The --dnslisten option is deprecated: use --httplisten")
-		if len(cfg.Host) == 0 {
-			return nil, fmt.Errorf("no hostname specified")
-		}
-
-		if len(cfg.Nameserver) == 0 {
-			return nil, fmt.Errorf("no nameserver specified")
-		}
-
-		cfg.DNSListen = normalizeAddress(cfg.DNSListen, defaultDNSPort)
-	}
-	if cfg.HTTPListen != "" {
-		cfg.HTTPListen = normalizeAddress(cfg.HTTPListen, defaultHTTPPort)
-	}
+	cfg.Listen = normalizeAddress(cfg.Listen, defaultHTTPPort)
 
 	if cfg.TestNet {
 		cfg.netParams = chaincfg.TestNet3Params()

@@ -162,22 +162,15 @@ func main() {
 		log.Print("Crawler done.")
 	}()
 
-	if cfg.HTTPListen != "" {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := serveHTTP(ctx, cfg.HTTPListen); err != nil {
-				log.Fatal(err)
-				shutdown()
-			}
-			log.Print("HTTP server done.")
-		}()
-	}
-
-	if cfg.DNSListen != "" {
-		dnsServer := NewDNSServer(cfg.Host, cfg.Nameserver, cfg.DNSListen)
-		go dnsServer.Start() // no graceful shutdown
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := serveHTTP(ctx, cfg.Listen); err != nil {
+			log.Fatal(err)
+			shutdown()
+		}
+		log.Print("HTTP server done.")
+	}()
 
 	// Wait for crawler and http server, then stop address manager.
 	wg.Wait()
