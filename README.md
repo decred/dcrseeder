@@ -1,5 +1,4 @@
-dcrseeder
-=========
+# dcrseeder
 
 [![Build Status](https://github.com/decred/dcrseeder/workflows/Build%20and%20Test/badge.svg)](https://github.com/decred/dcrseeder/actions)
 [![ISC License](https://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
@@ -24,7 +23,7 @@ random selection of the reliable nodes it knows about.
 
 ## Requirements
 
-[Go](https://golang.org) 1.14 or newer.
+[Go](https://golang.org) 1.17 or newer.
 
 ### Getting Started
 

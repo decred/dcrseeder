@@ -1,2 +1,12 @@
+*.exe
 dcrseeder
 vendor/
+
+# Testing, profiling, and benchmarking artifacts
+cov.out
+*cpu.out
+*mem.out
+
+# Go 1.18 workspace
+go.work
+go.work.sum
