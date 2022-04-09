@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/chaincfg/v3"
-	"github.com/decred/dcrd/peer/v2"
+	"github.com/decred/dcrd/peer/v3"
 	"github.com/decred/dcrd/wire"
 )
 

@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/decred/dcrd/chaincfg/v3"
-	"github.com/decred/dcrd/dcrutil/v3"
+	"github.com/decred/dcrd/dcrutil/v4"
 	flags "github.com/jessevdk/go-flags"
 )
 
