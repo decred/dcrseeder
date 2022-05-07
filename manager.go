@@ -16,7 +16,6 @@ import (
 
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrseeder/api"
-	"github.com/miekg/dns"
 )
 
 // Node represents a single node on the Decred network. This struct is json
@@ -187,46 +186,6 @@ func (m *Manager) GoodAddresses(ipversion, pver uint32, services wire.ServiceFla
 			ProtocolVersion: node.ProtocolVersion,
 		}
 		addrs = append(addrs, addr)
-		i--
-	}
-	m.mtx.RUnlock()
-
-	return addrs
-}
-
-// GoodDNSAddresses returns good working IPs that match both the
-// passed DNS query type and have the requested services.
-func (m *Manager) GoodDNSAddresses(qtype uint16, services wire.ServiceFlag) []net.IP {
-	addrs := make([]net.IP, 0, defaultMaxAddresses)
-	i := defaultMaxAddresses
-
-	if qtype != dns.TypeA && qtype != dns.TypeAAAA {
-		return addrs
-	}
-
-	now := time.Now()
-	m.mtx.RLock()
-	for _, node := range m.nodes {
-		if i == 0 {
-			break
-		}
-
-		if qtype == dns.TypeA && node.IP.To4() == nil {
-			continue
-		} else if qtype == dns.TypeAAAA && node.IP.To4() != nil {
-			continue
-		}
-
-		if node.LastSuccess.IsZero() ||
-			now.Sub(node.LastSuccess) > defaultStaleTimeout {
-			continue
-		}
-
-		// Does the node have the requested services?
-		if node.Services&services != services {
-			continue
-		}
-		addrs = append(addrs, node.IP)
 		i--
 	}
 	m.mtx.RUnlock()
