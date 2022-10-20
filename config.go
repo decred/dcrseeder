@@ -41,7 +41,7 @@ type config struct {
 }
 
 func loadConfig() (*config, error) {
-	err := os.MkdirAll(defaultHomeDir, 0700)
+	err := os.MkdirAll(defaultHomeDir, 0o700)
 	if err != nil {
 		// Show a nicer error message if it's because a symlink is
 		// linked to a directory that does not exist (probably because
@@ -125,8 +125,7 @@ func loadConfig() (*config, error) {
 // normalizeAddress returns addr with the passed default port appended if
 // there is not already a port specified.
 func normalizeAddress(addr, defaultPort string) string {
-	_, _, err := net.SplitHostPort(addr)
-	if err != nil {
+	if _, _, err := net.SplitHostPort(addr); err != nil {
 		return net.JoinHostPort(addr, defaultPort)
 	}
 	return addr

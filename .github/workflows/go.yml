@@ -13,15 +13,15 @@ jobs:
 
     steps:
       - name: Set up Go
-        uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a #v3.2.1
+        uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f #v3.3.1
         with:
           go-version: ${{ matrix.go }}
       - name: Check out source
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b #v3.0.2
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 #v3.1.0
       - name: Install Linters
-        run: "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.48.0"
+        run: "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.0"
       - name: Build
         run: go build ./...
       - name: Test
         run: |
-          sh ./run_tests.sh
+          ./run_tests.sh

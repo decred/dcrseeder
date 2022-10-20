@@ -14,7 +14,6 @@ func Test_IsRoutable(t *testing.T) {
 		ip               string
 		expectedRoutable bool
 	}{
-
 		// IP v4
 		"ip4 public": {
 			"8.8.8.8",

@@ -26,7 +26,7 @@ env GORACE="halt_on_error=1" go test -race ./...
 # static checker.
 
 # set output format
-if [[ -v CI ]]; then
+if [[ -n $CI ]]; then
     OUT_FORMAT="github-actions"
 else
     OUT_FORMAT="colored-line-number"
@@ -41,12 +41,11 @@ golangci-lint run --disable-all --deadline=10m \
   --enable=gosimple \
   --enable=unconvert \
   --enable=ineffassign \
-  --enable=structcheck \
   --enable=goimports \
   --enable=misspell \
   --enable=unparam \
-  --enable=deadcode \
   --enable=unused \
   --enable=errcheck \
-  --enable=asciicheck
-  
+  --enable=asciicheck \
+  --enable=noctx
+
