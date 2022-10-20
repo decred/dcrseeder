@@ -64,7 +64,7 @@ const (
 )
 
 func NewManager(dataDir string, defaultPort string) (*Manager, error) {
-	err := os.MkdirAll(dataDir, 0700)
+	err := os.MkdirAll(dataDir, 0o700)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +103,7 @@ func (m *Manager) AddAddresses(addrs []net.IP) int {
 	var count int
 
 	m.mtx.Lock()
+	now := time.Now()
 	for _, addr := range addrs {
 		if !isRoutable(addr) {
 			continue
@@ -111,12 +112,12 @@ func (m *Manager) AddAddresses(addrs []net.IP) int {
 
 		_, exists := m.nodes[addrStr]
 		if exists {
-			m.nodes[addrStr].LastSeen = time.Now()
+			m.nodes[addrStr].LastSeen = now
 			continue
 		}
 		node := Node{
 			IP:       addr,
-			LastSeen: time.Now(),
+			LastSeen: now,
 			// LastSuccess and LastAttempt are zero until Good flags them
 		}
 		m.nodes[addrStr] = &node
@@ -237,17 +238,25 @@ out:
 }
 
 func (m *Manager) prunePeers() {
-	var count int
-	now := time.Now()
 	m.mtx.Lock()
+	now := time.Now()
+
+	var count int
 	for k, node := range m.nodes {
+		// do not remove untried nodes
+		if node.LastAttempt.IsZero() {
+			continue
+		}
+
+		// node hasn't been seen via getaddr...
 		if now.Sub(node.LastSeen) > pruneExpireTimeout {
 			delete(m.nodes, k)
 			count++
 			continue
 		}
-		if !node.LastAttempt.IsZero() &&
-			now.Sub(node.LastSuccess) > pruneExpireTimeout {
+
+		// a successful connection hasn't been made...
+		if now.Sub(node.LastSuccess) > pruneExpireTimeout {
 			delete(m.nodes, k)
 			count++
 			continue
@@ -301,6 +310,7 @@ func (m *Manager) savePeers() {
 	}
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(&m.nodes); err != nil {
+		w.Close()
 		log.Printf("Failed to encode file %s: %v", tmpfile, err)
 		return
 	}
