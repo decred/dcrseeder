@@ -51,7 +51,7 @@ func Test_IsRoutable(t *testing.T) {
 			true,
 		},
 
-		// IP v6
+		// IPv6
 
 		"ip6 public": {
 			"2001:4860:4860::8888",
@@ -129,6 +129,24 @@ func Test_IsRoutable(t *testing.T) {
 		},
 		"ip6 outside RFC4193": {
 			"fe00:0000:0000:0000:0000:0000:0000:0000",
+			true,
+		},
+
+		// RFC6598
+		"ip4 start RFC6598": {
+			"100.64.0.0",
+			false,
+		},
+		"ip4 end RFC6598": {
+			"100.127.255.255",
+			false,
+		},
+		"ip4 outside start RFC6598": {
+			"100.63.255.255",
+			true,
+		},
+		"ip4 outside end RFC6598": {
+			"100.128.0.0",
 			true,
 		},
 	}
