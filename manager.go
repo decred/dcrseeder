@@ -22,6 +22,7 @@ import (
 // encoded to be stored on disk.
 type Node struct {
 	Services        wire.ServiceFlag
+	Created         time.Time
 	LastAttempt     time.Time
 	LastSuccess     time.Time
 	LastSeen        time.Time
@@ -120,6 +121,7 @@ func (m *Manager) AddAddresses(addrPorts []netip.AddrPort) int {
 
 		node := Node{
 			IP:       addrPort,
+			Created:  now,
 			LastSeen: now,
 			// LastSuccess and LastAttempt are zero until Good flags them
 		}
