@@ -60,7 +60,7 @@ const (
 
 	// pruneExpireTimeout is the expire time in which a node is
 	// considered dead.
-	pruneExpireTimeout = time.Hour * 8
+	pruneExpireTimeout = time.Hour * 24
 )
 
 func NewManager(dataDir string) (*Manager, error) {
