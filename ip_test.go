@@ -5,7 +5,7 @@
 package main
 
 import (
-	"net"
+	"net/netip"
 	"testing"
 )
 
@@ -152,7 +152,12 @@ func Test_IsRoutable(t *testing.T) {
 	}
 
 	for testName, test := range ipTests {
-		actualRoutable := isRoutable(net.ParseIP(test.ip))
+		addr, err := netip.ParseAddr(test.ip)
+		if err != nil {
+			t.Fatalf("%s: failed to parse %v: %v",
+				testName, test.ip, err)
+		}
+		actualRoutable := isRoutable(addr)
 		if actualRoutable != test.expectedRoutable {
 			t.Fatalf("%s: expected routable==%t for IP %s",
 				testName, test.expectedRoutable, test.ip)

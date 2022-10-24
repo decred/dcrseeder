@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/netip"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -31,7 +32,7 @@ const (
 
 var amgr *Manager
 
-func testPeer(ctx context.Context, ip net.IP, netParams *chaincfg.Params) {
+func testPeer(ctx context.Context, ip netip.AddrPort, netParams *chaincfg.Params) {
 	onaddr := make(chan struct{}, 1)
 	verack := make(chan struct{}, 1)
 	config := peer.Config{
@@ -42,9 +43,12 @@ func testPeer(ctx context.Context, ip net.IP, netParams *chaincfg.Params) {
 
 		Listeners: peer.MessageListeners{
 			OnAddr: func(p *peer.Peer, msg *wire.MsgAddr) {
-				n := make([]net.IP, 0, len(msg.AddrList))
-				for _, addr := range msg.AddrList {
-					n = append(n, addr.IP)
+				n := make([]netip.AddrPort, 0, len(msg.AddrList))
+				for _, entry := range msg.AddrList {
+					if addr, ok := netip.AddrFromSlice(entry.IP); ok {
+						addrPort := netip.AddrPortFrom(addr, entry.Port)
+						n = append(n, addrPort)
+					}
 				}
 				added := amgr.AddAddresses(n)
 				log.Printf("Peer %v sent %v addresses, %d new",
@@ -59,7 +63,7 @@ func testPeer(ctx context.Context, ip net.IP, netParams *chaincfg.Params) {
 		},
 	}
 
-	host := net.JoinHostPort(ip.String(), netParams.DefaultPort)
+	host := ip.String()
 	p, err := peer.NewOutboundPeer(&config, host)
 	if err != nil {
 		log.Printf("NewOutboundPeer on %v: %v", host, err)
@@ -84,7 +88,7 @@ func testPeer(ctx context.Context, ip net.IP, netParams *chaincfg.Params) {
 	select {
 	case <-verack:
 		// Mark this peer as a good node.
-		amgr.Good(p.NA().IP, p.Services(), p.ProtocolVersion())
+		amgr.Good(ip, p.Services(), p.ProtocolVersion())
 
 		// Ask peer for some addresses.
 		p.QueueMessage(wire.NewMsgGetAddr(), nil)
@@ -124,7 +128,7 @@ func creep(ctx context.Context, netParams *chaincfg.Params) {
 		var wg sync.WaitGroup
 		wg.Add(len(ips))
 		for _, ip := range ips {
-			go func(ip net.IP) {
+			go func(ip netip.AddrPort) {
 				defer wg.Done()
 				testPeer(ctx, ip, netParams)
 			}(ip)
@@ -139,14 +143,20 @@ func main() {
 		fmt.Fprintf(os.Stderr, "loadConfig: %v\n", err)
 		os.Exit(1)
 	}
-	amgr, err = NewManager(filepath.Join(defaultHomeDir,
-		cfg.netParams.Name), cfg.netParams.DefaultPort)
+
+	dataDir := filepath.Join(defaultHomeDir, cfg.netParams.Name)
+	amgr, err = NewManager(dataDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NewManager: %v\n", err)
 		os.Exit(1)
 	}
 
-	amgr.AddAddresses([]net.IP{net.ParseIP(cfg.Seeder)})
+	seeder, err := netip.ParseAddrPort(cfg.Seeder)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid seeder ip: %v\n", err)
+		os.Exit(1)
+	}
+	amgr.AddAddresses([]netip.AddrPort{seeder})
 
 	ctx, shutdown := context.WithCancel(context.Background())
 	killSwitch := make(chan os.Signal, 1)

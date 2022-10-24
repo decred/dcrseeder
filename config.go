@@ -33,10 +33,9 @@ var (
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	Listen  string `long:"httplisten" description:"HTTP listen on address:port"`
-	Seeder  string `short:"s" long:"default seeder" description:"IP address of a working node"`
-	TestNet bool   `long:"testnet" description:"Use testnet"`
-
+	Listen    string `long:"httplisten" description:"HTTP listen on address:port"`
+	Seeder    string `short:"s" description:"IP address of a working node"`
+	TestNet   bool   `long:"testnet" description:"Use testnet"`
 	netParams *chaincfg.Params
 }
 
@@ -98,14 +97,10 @@ func loadConfig() (*config, error) {
 		}
 		return nil, err
 	}
-
-	if len(cfg.Seeder) == 0 {
-		return nil, fmt.Errorf("no seeder specified")
-	}
-
-	if net.ParseIP(cfg.Seeder) == nil {
-		str := "\"%s\" is not a valid textual representation of an IP address"
-		return nil, fmt.Errorf(str, cfg.Seeder)
+	if cfg.TestNet {
+		cfg.netParams = chaincfg.TestNet3Params()
+	} else {
+		cfg.netParams = chaincfg.MainNetParams()
 	}
 
 	if cfg.Listen == "" {
@@ -113,11 +108,10 @@ func loadConfig() (*config, error) {
 	}
 	cfg.Listen = normalizeAddress(cfg.Listen, defaultHTTPPort)
 
-	if cfg.TestNet {
-		cfg.netParams = chaincfg.TestNet3Params()
-	} else {
-		cfg.netParams = chaincfg.MainNetParams()
+	if len(cfg.Seeder) == 0 {
+		return nil, fmt.Errorf("no seeder specified")
 	}
+	cfg.Seeder = normalizeAddress(cfg.Seeder, cfg.netParams.DefaultPort)
 
 	return &cfg, nil
 }

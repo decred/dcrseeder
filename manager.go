@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"sync"
@@ -26,13 +26,12 @@ type Node struct {
 	LastSuccess     time.Time
 	LastSeen        time.Time
 	ProtocolVersion uint32
-	IP              net.IP
+	IP              netip.AddrPort
 }
 
 type Manager struct {
 	mtx sync.RWMutex
 
-	port      string
 	nodes     map[string]*Node
 	wg        sync.WaitGroup
 	quit      chan struct{}
@@ -63,14 +62,13 @@ const (
 	pruneExpireTimeout = time.Hour * 8
 )
 
-func NewManager(dataDir string, defaultPort string) (*Manager, error) {
+func NewManager(dataDir string) (*Manager, error) {
 	err := os.MkdirAll(dataDir, 0o700)
 	if err != nil {
 		return nil, err
 	}
 
 	amgr := Manager{
-		port:      defaultPort,
 		nodes:     make(map[string]*Node),
 		peersFile: filepath.Join(dataDir, peersFilename),
 		quit:      make(chan struct{}),
@@ -99,24 +97,29 @@ func (m *Manager) Stop() {
 	log.Print("Address manager done.")
 }
 
-func (m *Manager) AddAddresses(addrs []net.IP) int {
+func (m *Manager) AddAddresses(addrPorts []netip.AddrPort) int {
 	var count int
 
 	m.mtx.Lock()
 	now := time.Now()
-	for _, addr := range addrs {
-		if !isRoutable(addr) {
+	for _, addrPortT := range addrPorts {
+		// Never use ipv4-wrapped ipv6 addresses.
+		addrPort := netip.AddrPortFrom(addrPortT.Addr().Unmap(),
+			addrPortT.Port())
+
+		if !isRoutable(addrPort.Addr()) {
 			continue
 		}
-		addrStr := addr.String()
 
+		addrStr := addrPort.String()
 		_, exists := m.nodes[addrStr]
 		if exists {
 			m.nodes[addrStr].LastSeen = now
 			continue
 		}
+
 		node := Node{
-			IP:       addr,
+			IP:       addrPort,
 			LastSeen: now,
 			// LastSuccess and LastAttempt are zero until Good flags them
 		}
@@ -129,8 +132,8 @@ func (m *Manager) AddAddresses(addrs []net.IP) int {
 }
 
 // Addresses returns IPs that need to be tested again.
-func (m *Manager) Addresses() []net.IP {
-	addrs := make([]net.IP, 0, defaultMaxAddresses*8)
+func (m *Manager) Addresses() []netip.AddrPort {
+	addrs := make([]netip.AddrPort, 0, defaultMaxAddresses*8)
 	now := time.Now()
 	i := defaultMaxAddresses
 
@@ -168,11 +171,11 @@ func (m *Manager) GoodAddresses(ipversion, pver uint32, services wire.ServiceFla
 		}
 		switch ipversion {
 		case 4:
-			if node.IP.To4() == nil {
+			if !node.IP.Addr().Is4() {
 				continue
 			}
 		case 6:
-			if node.IP.To4() != nil {
+			if !node.IP.Addr().Is6() {
 				continue
 			}
 		}
@@ -183,7 +186,7 @@ func (m *Manager) GoodAddresses(ipversion, pver uint32, services wire.ServiceFla
 			continue
 		}
 		addr := api.Node{
-			Host:            net.JoinHostPort(node.IP.String(), m.port),
+			Host:            node.IP.String(),
 			Services:        uint64(node.Services),
 			ProtocolVersion: node.ProtocolVersion,
 		}
@@ -195,18 +198,18 @@ func (m *Manager) GoodAddresses(ipversion, pver uint32, services wire.ServiceFla
 	return addrs
 }
 
-func (m *Manager) Attempt(ip net.IP) {
+func (m *Manager) Attempt(addrPort netip.AddrPort) {
 	m.mtx.Lock()
-	node, exists := m.nodes[ip.String()]
+	node, exists := m.nodes[addrPort.String()]
 	if exists {
 		node.LastAttempt = time.Now()
 	}
 	m.mtx.Unlock()
 }
 
-func (m *Manager) Good(ip net.IP, services wire.ServiceFlag, pver uint32) {
+func (m *Manager) Good(addrPort netip.AddrPort, services wire.ServiceFlag, pver uint32) {
 	m.mtx.Lock()
-	node, exists := m.nodes[ip.String()]
+	node, exists := m.nodes[addrPort.String()]
 	if exists {
 		node.ProtocolVersion = pver
 		node.Services = services
