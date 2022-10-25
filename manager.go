@@ -22,8 +22,8 @@ import (
 // encoded to be stored on disk.
 type Node struct {
 	Services        wire.ServiceFlag
-	Created         time.Time
 	LastAttempt     time.Time
+	FirstSuccess    time.Time
 	LastSuccess     time.Time
 	LastSeen        time.Time
 	ProtocolVersion uint32
@@ -121,9 +121,9 @@ func (m *Manager) AddAddresses(addrPorts []netip.AddrPort) int {
 
 		node := Node{
 			IP:       addrPort,
-			Created:  now,
 			LastSeen: now,
-			// LastSuccess and LastAttempt are zero until Good flags them
+			// FirstSuccess, LastSuccess and LastAttempt are
+			// set by Good().
 		}
 		m.nodes[addrStr] = &node
 		count++
@@ -213,9 +213,14 @@ func (m *Manager) Good(addrPort netip.AddrPort, services wire.ServiceFlag, pver 
 	m.mtx.Lock()
 	node, exists := m.nodes[addrPort.String()]
 	if exists {
+		now := time.Now()
+
 		node.ProtocolVersion = pver
 		node.Services = services
-		node.LastSuccess = time.Now()
+		node.LastSuccess = now
+		if node.FirstSuccess.IsZero() {
+			node.FirstSuccess = now
+		}
 	}
 	m.mtx.Unlock()
 }
