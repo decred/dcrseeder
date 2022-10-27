@@ -22,8 +22,8 @@ import (
 // encoded to be stored on disk.
 type Node struct {
 	Services        wire.ServiceFlag
-	Created         time.Time
 	LastAttempt     time.Time
+	FirstSuccess    time.Time
 	LastSuccess     time.Time
 	LastSeen        time.Time
 	ProtocolVersion uint32
@@ -60,7 +60,7 @@ const (
 
 	// pruneExpireTimeout is the expire time in which a node is
 	// considered dead.
-	pruneExpireTimeout = time.Hour * 8
+	pruneExpireTimeout = time.Hour * 24
 )
 
 func NewManager(dataDir string) (*Manager, error) {
@@ -121,9 +121,9 @@ func (m *Manager) AddAddresses(addrPorts []netip.AddrPort) int {
 
 		node := Node{
 			IP:       addrPort,
-			Created:  now,
 			LastSeen: now,
-			// LastSuccess and LastAttempt are zero until Good flags them
+			// FirstSuccess, LastSuccess and LastAttempt are
+			// set by Good().
 		}
 		m.nodes[addrStr] = &node
 		count++
@@ -136,10 +136,10 @@ func (m *Manager) AddAddresses(addrPorts []netip.AddrPort) int {
 // Addresses returns IPs that need to be tested again.
 func (m *Manager) Addresses() []netip.AddrPort {
 	addrs := make([]netip.AddrPort, 0, defaultMaxAddresses*8)
-	now := time.Now()
 	i := defaultMaxAddresses
 
 	m.mtx.RLock()
+	now := time.Now()
 	for _, node := range m.nodes {
 		if i == 0 {
 			break
@@ -160,17 +160,26 @@ func (m *Manager) GoodAddresses(ipversion, pver uint32, services wire.ServiceFla
 	addrs := make([]api.Node, 0, defaultMaxAddresses)
 	i := defaultMaxAddresses
 
-	now := time.Now()
 	m.mtx.RLock()
+	now := time.Now()
 	for _, node := range m.nodes {
 		if i == 0 {
 			break
 		}
 
-		if node.LastSuccess.IsZero() ||
-			now.Sub(node.LastSuccess) > defaultStaleTimeout {
+		// Skip nodes that aren't known to be be stable yet.
+		if node.FirstSuccess.IsZero() ||
+			now.Sub(node.FirstSuccess) < defaultStaleTimeout {
 			continue
 		}
+
+		// Skip nodes that do not seem to be online.
+		if node.LastSuccess.IsZero() ||
+			now.Sub(node.LastSuccess) >= defaultStaleTimeout {
+			continue
+		}
+
+		// Filter on ipversion
 		switch ipversion {
 		case 4:
 			if !node.IP.Addr().Is4() {
@@ -181,12 +190,17 @@ func (m *Manager) GoodAddresses(ipversion, pver uint32, services wire.ServiceFla
 				continue
 			}
 		}
+
+		// Filter on protocol version
 		if pver != 0 && node.ProtocolVersion < pver {
 			continue
 		}
+
+		// Filter on services
 		if services != 0 && node.Services&services != services {
 			continue
 		}
+
 		addr := api.Node{
 			Host:            node.IP.String(),
 			Services:        uint64(node.Services),
@@ -213,9 +227,14 @@ func (m *Manager) Good(addrPort netip.AddrPort, services wire.ServiceFlag, pver 
 	m.mtx.Lock()
 	node, exists := m.nodes[addrPort.String()]
 	if exists {
+		now := time.Now()
+
 		node.ProtocolVersion = pver
 		node.Services = services
-		node.LastSuccess = time.Now()
+		node.LastSuccess = now
+		if node.FirstSuccess.IsZero() {
+			node.FirstSuccess = now
+		}
 	}
 	m.mtx.Unlock()
 }
