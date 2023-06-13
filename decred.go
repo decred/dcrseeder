@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 The Decred developers
+// Copyright (c) 2018-2023 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -180,7 +180,6 @@ func main() {
 		defer wg.Done()
 		if err := serveHTTP(ctx, cfg.Listen); err != nil {
 			log.Fatal(err)
-			shutdown()
 		}
 		log.Print("HTTP server done.")
 	}()

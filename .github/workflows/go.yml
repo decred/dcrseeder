@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [1.18, 1.19]
+        go: ["1.19", "1.20"]
 
     steps:
       - name: Set up Go
@@ -19,7 +19,7 @@ jobs:
       - name: Check out source
         uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 #v3.1.0
       - name: Install Linters
-        run: "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.1"
+        run: "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.53.2"
       - name: Build
         run: go build ./...
       - name: Test
