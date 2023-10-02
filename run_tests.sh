@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # The script does the following automatic checking on a Go package and its sub-packages:
 # 1. go mod tidiness
 # 2. unit tests
