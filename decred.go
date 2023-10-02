@@ -11,10 +11,8 @@ import (
 	"net"
 	"net/netip"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/decred/dcrd/chaincfg/v3"
@@ -138,6 +136,8 @@ func creep(ctx context.Context, netParams *chaincfg.Params) {
 }
 
 func main() {
+	ctx := shutdownListener()
+
 	cfg, err := loadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "loadConfig: %v\n", err)
@@ -157,15 +157,6 @@ func main() {
 		os.Exit(1)
 	}
 	amgr.AddAddresses([]netip.AddrPort{seeder})
-
-	ctx, shutdown := context.WithCancel(context.Background())
-	killSwitch := make(chan os.Signal, 1)
-	signal.Notify(killSwitch, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
-	go func() {
-		<-killSwitch
-		log.Print("Shutting down...")
-		shutdown()
-	}()
 
 	var wg sync.WaitGroup
 	wg.Add(1)
