@@ -1,0 +1,19 @@
+run:
+  deadline: 10m
+
+linters:
+  disable-all: true
+  enable:
+    - asciicheck
+    - errcheck
+    - gofmt
+    - goimports
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - noctx
+    - revive
+    - unconvert
+    - unparam
+    - unused
