@@ -14,16 +14,8 @@ env GORACE="halt_on_error=1" go test -race ./...
 # golangci-lint (github.com/golangci/golangci-lint) is used to run each each
 # static checker.
 
-# set output format
-if [[ -n $CI ]]; then
-    OUT_FORMAT="github-actions"
-else
-    OUT_FORMAT="colored-line-number"
-fi
-
 # run linter
 golangci-lint run --disable-all --deadline=10m \
-  --out-format=$OUT_FORMAT \
   --enable=gofmt \
   --enable=revive \
   --enable=govet \
