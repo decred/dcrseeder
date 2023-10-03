@@ -1,10 +1,11 @@
-// Copyright (c) 2018-2021 The Decred developers
+// Copyright (c) 2018-2023 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -34,8 +35,6 @@ type Manager struct {
 	mtx sync.RWMutex
 
 	nodes     map[string]*Node
-	wg        sync.WaitGroup
-	quit      chan struct{}
 	peersFile string
 }
 
@@ -72,7 +71,6 @@ func NewManager(dataDir string) (*Manager, error) {
 	amgr := Manager{
 		nodes:     make(map[string]*Node),
 		peersFile: filepath.Join(dataDir, peersFilename),
-		quit:      make(chan struct{}),
 	}
 
 	err = amgr.deserializePeers()
@@ -86,16 +84,7 @@ func NewManager(dataDir string) (*Manager, error) {
 		}
 	}
 
-	amgr.wg.Add(1)
-	go amgr.addressHandler()
-
 	return &amgr, nil
-}
-
-func (m *Manager) Stop() {
-	close(m.quit)
-	m.wg.Wait() // wait for addressHandler
-	log.Print("Address manager done.")
 }
 
 func (m *Manager) AddAddresses(addrPorts []netip.AddrPort) int {
@@ -239,10 +228,8 @@ func (m *Manager) Good(addrPort netip.AddrPort, services wire.ServiceFlag, pver 
 	m.mtx.Unlock()
 }
 
-// addressHandler is the main handler for the address manager.  It must be run
-// as a goroutine.
-func (m *Manager) addressHandler() {
-	defer m.wg.Done()
+// run is the main handler for the address manager.
+func (m *Manager) run(ctx context.Context) {
 	pruneAddressTicker := time.NewTicker(pruneAddressInterval)
 	defer pruneAddressTicker.Stop()
 	dumpAddressTicker := time.NewTicker(dumpAddressInterval)
@@ -254,7 +241,7 @@ out:
 			m.savePeers()
 		case <-pruneAddressTicker.C:
 			m.prunePeers()
-		case <-m.quit:
+		case <-ctx.Done():
 			break out
 		}
 	}
