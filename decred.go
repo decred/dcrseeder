@@ -159,6 +159,14 @@ func main() {
 	amgr.AddAddresses([]netip.AddrPort{seeder})
 
 	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		amgr.run(ctx) // only returns on context cancellation
+		log.Print("Address manager done.")
+	}()
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -177,6 +185,5 @@ func main() {
 
 	// Wait for crawler and http server, then stop address manager.
 	wg.Wait()
-	amgr.Stop()
 	log.Print("Bye!")
 }
