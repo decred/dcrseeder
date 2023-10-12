@@ -31,12 +31,14 @@ const (
 type crawler struct {
 	params *chaincfg.Params
 	amgr   *Manager
+	log    *log.Logger
 }
 
-func newCrawler(params *chaincfg.Params, amgr *Manager) *crawler {
+func newCrawler(params *chaincfg.Params, amgr *Manager, log *log.Logger) *crawler {
 	return &crawler{
 		params: params,
 		amgr:   amgr,
+		log:    log,
 	}
 }
 
@@ -59,12 +61,12 @@ func (c *crawler) testPeer(ctx context.Context, ip netip.AddrPort) {
 					}
 				}
 				added := c.amgr.AddAddresses(n)
-				log.Printf("Peer %v sent %v addresses, %d new",
+				c.log.Printf("Peer %v sent %v addresses, %d new",
 					p.Addr(), len(msg.AddrList), added)
 				onaddr <- struct{}{}
 			},
 			OnVerAck: func(p *peer.Peer, msg *wire.MsgVerAck) {
-				log.Printf("Adding peer %v with services %v pver %d",
+				c.log.Printf("Adding peer %v with services %v pver %d",
 					p.NA().IP.String(), p.Services(), p.ProtocolVersion())
 				verack <- struct{}{}
 			},
@@ -74,7 +76,7 @@ func (c *crawler) testPeer(ctx context.Context, ip netip.AddrPort) {
 	host := ip.String()
 	p, err := peer.NewOutboundPeer(&config, host)
 	if err != nil {
-		log.Printf("NewOutboundPeer on %v: %v", host, err)
+		c.log.Printf("NewOutboundPeer on %v: %v", host, err)
 		return
 	}
 
@@ -102,7 +104,7 @@ func (c *crawler) testPeer(ctx context.Context, ip netip.AddrPort) {
 		p.QueueMessage(wire.NewMsgGetAddr(), nil)
 
 	case <-time.After(defaultNodeTimeout):
-		log.Printf("verack timeout on peer %v", p.Addr())
+		c.log.Printf("verack timeout on peer %v", p.Addr())
 		return
 	case <-ctx.Done():
 		return
@@ -111,7 +113,7 @@ func (c *crawler) testPeer(ctx context.Context, ip netip.AddrPort) {
 	select {
 	case <-onaddr:
 	case <-time.After(defaultNodeTimeout):
-		log.Printf("getaddr timeout on peer %v", p.Addr())
+		c.log.Printf("getaddr timeout on peer %v", p.Addr())
 	case <-ctx.Done():
 	}
 }
@@ -124,7 +126,7 @@ func (c *crawler) run(ctx context.Context) {
 
 		ips := c.amgr.Addresses()
 		if len(ips) == 0 {
-			log.Printf("No stale addresses -- sleeping for %v", defaultAddressTimeout)
+			c.log.Printf("No stale addresses -- sleeping for %v", defaultAddressTimeout)
 			select {
 			case <-time.After(defaultAddressTimeout):
 			case <-ctx.Done():
@@ -154,8 +156,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Prefix log lines with current network, e.g. "[mainnet]" or "[testnet]".
+	logPrefix := fmt.Sprintf("[%.7s] ", cfg.netParams.Name)
+	log := log.New(os.Stdout, logPrefix, log.LstdFlags|log.Lmsgprefix)
+
 	dataDir := filepath.Join(defaultHomeDir, cfg.netParams.Name)
-	amgr, err := NewManager(dataDir)
+	amgr, err := NewManager(dataDir, log)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NewManager: %v\n", err)
 		os.Exit(1)
@@ -168,9 +174,9 @@ func main() {
 	}
 	amgr.AddAddresses([]netip.AddrPort{seeder})
 
-	c := newCrawler(cfg.netParams, amgr)
+	c := newCrawler(cfg.netParams, amgr, log)
 
-	server, err := newServer(cfg.Listen, amgr)
+	server, err := newServer(cfg.Listen, amgr, log)
 	if err != nil {
 		log.Fatal(err)
 	}
