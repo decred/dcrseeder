@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/netip"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -160,19 +159,13 @@ func main() {
 	logPrefix := fmt.Sprintf("[%.7s] ", cfg.netParams.Name)
 	log := log.New(os.Stdout, logPrefix, log.LstdFlags|log.Lmsgprefix)
 
-	dataDir := filepath.Join(defaultHomeDir, cfg.netParams.Name)
-	amgr, err := NewManager(dataDir, log)
+	amgr, err := NewManager(cfg.dataDir, log)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NewManager: %v\n", err)
 		os.Exit(1)
 	}
 
-	seeder, err := netip.ParseAddrPort(cfg.Seeder)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid seeder ip: %v\n", err)
-		os.Exit(1)
-	}
-	amgr.AddAddresses([]netip.AddrPort{seeder})
+	amgr.AddAddresses([]netip.AddrPort{cfg.seederIP})
 
 	c := newCrawler(cfg.netParams, amgr, log)
 
