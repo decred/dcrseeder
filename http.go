@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -81,10 +80,15 @@ func httpGetAddrs(w http.ResponseWriter, r *http.Request, amgr *Manager) {
 	}
 }
 
-func serveHTTP(ctx context.Context, addr string, amgr *Manager) error {
+type server struct {
+	srv      *http.Server
+	listener net.Listener
+}
+
+func newServer(addr string, amgr *Manager) (*server, error) {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		return fmt.Errorf("can't listen on %s. web server quitting: %w", addr, err)
+		return nil, err
 	}
 
 	mux := http.NewServeMux()
@@ -98,24 +102,37 @@ func serveHTTP(ctx context.Context, addr string, amgr *Manager) error {
 		WriteTimeout: defaultHTTPTimeout, // request to response time
 	}
 
-	// Shutdown the server on context cancellation.
+	return &server{
+		srv:      srv,
+		listener: listener,
+	}, nil
+}
+
+func (h *server) run(ctx context.Context) {
 	var wg sync.WaitGroup
+
+	// Add the graceful shutdown to the waitgroup.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		// Wait until context is canceled before shutting down the server.
 		<-ctx.Done()
-		ctxShutdown, cancel := context.WithTimeout(context.Background(), defaultHTTPTimeout)
-		defer cancel()
-		err := srv.Shutdown(ctxShutdown)
-		if err != nil {
-			log.Printf("Trouble shutting down HTTP server: %v", err)
+		_ = h.srv.Shutdown(ctx)
+	}()
+
+	// Start webserver.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		log.Printf("Listening on %s", h.listener.Addr())
+		err := h.srv.Serve(h.listener)
+		// ErrServerClosed is expected from a graceful server shutdown, it can
+		// be ignored. Anything else should be logged.
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("unexpected (http.Server).Serve error: %v", err)
 		}
 	}()
-	defer wg.Wait()
 
-	err = srv.Serve(listener) // blocking
-	if !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("unexpected (http.Server).Serve error: %w", err)
-	}
-	return nil // Shutdown called
+	wg.Wait()
 }
