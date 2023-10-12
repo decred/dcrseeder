@@ -21,7 +21,7 @@ import (
 
 const defaultHTTPTimeout = 10 * time.Second
 
-func httpGetAddrs(w http.ResponseWriter, r *http.Request, amgr *Manager) {
+func httpGetAddrs(w http.ResponseWriter, r *http.Request, amgr *Manager, log *log.Logger) {
 	var wantedIP uint32
 	var wantedPV uint32
 	var wantedSF wire.ServiceFlag
@@ -83,9 +83,10 @@ func httpGetAddrs(w http.ResponseWriter, r *http.Request, amgr *Manager) {
 type server struct {
 	srv      *http.Server
 	listener net.Listener
+	log      *log.Logger
 }
 
-func newServer(addr string, amgr *Manager) (*server, error) {
+func newServer(addr string, amgr *Manager, log *log.Logger) (*server, error) {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -93,7 +94,7 @@ func newServer(addr string, amgr *Manager) (*server, error) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc(api.GetAddrsPath, func(w http.ResponseWriter, r *http.Request) {
-		httpGetAddrs(w, r, amgr)
+		httpGetAddrs(w, r, amgr, log)
 	})
 
 	srv := &http.Server{
@@ -105,6 +106,7 @@ func newServer(addr string, amgr *Manager) (*server, error) {
 	return &server{
 		srv:      srv,
 		listener: listener,
+		log:      log,
 	}, nil
 }
 
@@ -125,12 +127,12 @@ func (h *server) run(ctx context.Context) {
 	go func() {
 		defer wg.Done()
 
-		log.Printf("Listening on %s", h.listener.Addr())
+		h.log.Printf("Listening on %s", h.listener.Addr())
 		err := h.srv.Serve(h.listener)
 		// ErrServerClosed is expected from a graceful server shutdown, it can
 		// be ignored. Anything else should be logged.
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("unexpected (http.Server).Serve error: %v", err)
+			h.log.Printf("unexpected (http.Server).Serve error: %v", err)
 		}
 	}()
 
