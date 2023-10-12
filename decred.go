@@ -147,12 +147,18 @@ func (c *crawler) run(ctx context.Context) {
 }
 
 func main() {
+	os.Exit(run())
+}
+
+// run is the real main function for dcrseeder. It is necessary to work around
+// the fact that deferred functions do not run when os.Exit() is called.
+func run() int {
 	ctx := shutdownListener()
 
 	cfg, err := loadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "loadConfig: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	// Prefix log lines with current network, e.g. "[mainnet]" or "[testnet]".
@@ -162,7 +168,7 @@ func main() {
 	amgr, err := NewManager(cfg.dataDir, log)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NewManager: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	amgr.AddAddresses([]netip.AddrPort{cfg.seederIP})
@@ -171,7 +177,8 @@ func main() {
 
 	server, err := newServer(cfg.Listen, amgr, log)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprint(os.Stderr, err)
+		return 1
 	}
 
 	var wg sync.WaitGroup
@@ -200,4 +207,6 @@ func main() {
 	// Wait for crawler and http server, then stop address manager.
 	wg.Wait()
 	log.Print("Bye!")
+
+	return 0
 }
