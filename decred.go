@@ -30,13 +30,25 @@ const (
 
 var amgr *Manager
 
-func testPeer(ctx context.Context, ip netip.AddrPort, netParams *chaincfg.Params) {
+type crawler struct {
+	params *chaincfg.Params
+	amgr   *Manager
+}
+
+func newCrawler(params *chaincfg.Params, amgr *Manager) *crawler {
+	return &crawler{
+		params: params,
+		amgr:   amgr,
+	}
+}
+
+func (c *crawler) testPeer(ctx context.Context, ip netip.AddrPort) {
 	onaddr := make(chan struct{}, 1)
 	verack := make(chan struct{}, 1)
 	config := peer.Config{
 		UserAgentName:    appName,
 		UserAgentVersion: "0.0.1",
-		Net:              netParams.Net,
+		Net:              c.params.Net,
 		DisableRelayTx:   true,
 
 		Listeners: peer.MessageListeners{
@@ -48,7 +60,7 @@ func testPeer(ctx context.Context, ip netip.AddrPort, netParams *chaincfg.Params
 						n = append(n, addrPort)
 					}
 				}
-				added := amgr.AddAddresses(n)
+				added := c.amgr.AddAddresses(n)
 				log.Printf("Peer %v sent %v addresses, %d new",
 					p.Addr(), len(msg.AddrList), added)
 				onaddr <- struct{}{}
@@ -70,7 +82,7 @@ func testPeer(ctx context.Context, ip netip.AddrPort, netParams *chaincfg.Params
 
 	// Time stamp the attempt after disconnect or dial error so we don't prune
 	// this peer before or during its test.
-	defer amgr.Attempt(ip)
+	defer c.amgr.Attempt(ip)
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, defaultNodeTimeout)
 	defer cancel()
@@ -86,7 +98,7 @@ func testPeer(ctx context.Context, ip netip.AddrPort, netParams *chaincfg.Params
 	select {
 	case <-verack:
 		// Mark this peer as a good node.
-		amgr.Good(ip, p.Services(), p.ProtocolVersion())
+		c.amgr.Good(ip, p.Services(), p.ProtocolVersion())
 
 		// Ask peer for some addresses.
 		p.QueueMessage(wire.NewMsgGetAddr(), nil)
@@ -106,13 +118,13 @@ func testPeer(ctx context.Context, ip netip.AddrPort, netParams *chaincfg.Params
 	}
 }
 
-func creep(ctx context.Context, netParams *chaincfg.Params) {
+func (c *crawler) run(ctx context.Context) {
 	for {
 		if ctx.Err() != nil {
 			return
 		}
 
-		ips := amgr.Addresses()
+		ips := c.amgr.Addresses()
 		if len(ips) == 0 {
 			log.Printf("No stale addresses -- sleeping for %v", defaultAddressTimeout)
 			select {
@@ -128,7 +140,7 @@ func creep(ctx context.Context, netParams *chaincfg.Params) {
 		for _, ip := range ips {
 			go func(ip netip.AddrPort) {
 				defer wg.Done()
-				testPeer(ctx, ip, netParams)
+				c.testPeer(ctx, ip)
 			}(ip)
 		}
 		wg.Wait()
@@ -158,19 +170,21 @@ func main() {
 	}
 	amgr.AddAddresses([]netip.AddrPort{seeder})
 
+	c := newCrawler(cfg.netParams, amgr)
+
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		amgr.run(ctx) // only returns on context cancellation
+		amgr.run(ctx) // Only returns on context cancellation.
 		log.Print("Address manager done.")
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		creep(ctx, cfg.netParams) // only returns on context cancellation
+		c.run(ctx) // Only returns on context cancellation.
 		log.Print("Crawler done.")
 	}()
 
