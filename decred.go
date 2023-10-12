@@ -170,6 +170,11 @@ func main() {
 
 	c := newCrawler(cfg.netParams, amgr)
 
+	server, err := newServer(cfg.Listen, amgr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -189,9 +194,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := serveHTTP(ctx, cfg.Listen, amgr); err != nil {
-			log.Fatal(err)
-		}
+		server.run(ctx) // Only returns on context cancellation.
 		log.Print("HTTP server done.")
 	}()
 
