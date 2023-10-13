@@ -28,8 +28,6 @@ const (
 	defaultNodeTimeout = time.Second * 3
 )
 
-var amgr *Manager
-
 type crawler struct {
 	params *chaincfg.Params
 	amgr   *Manager
@@ -157,7 +155,7 @@ func main() {
 	}
 
 	dataDir := filepath.Join(defaultHomeDir, cfg.netParams.Name)
-	amgr, err = NewManager(dataDir)
+	amgr, err := NewManager(dataDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NewManager: %v\n", err)
 		os.Exit(1)
@@ -191,7 +189,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := serveHTTP(ctx, cfg.Listen); err != nil {
+		if err := serveHTTP(ctx, cfg.Listen, amgr); err != nil {
 			log.Fatal(err)
 		}
 		log.Print("HTTP server done.")

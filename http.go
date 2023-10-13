@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 The Decred developers
+// Copyright (c) 2018-2023 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -22,7 +22,7 @@ import (
 
 const defaultHTTPTimeout = 10 * time.Second
 
-func httpGetAddrs(w http.ResponseWriter, r *http.Request) {
+func httpGetAddrs(w http.ResponseWriter, r *http.Request, amgr *Manager) {
 	var wantedIP uint32
 	var wantedPV uint32
 	var wantedSF wire.ServiceFlag
@@ -81,14 +81,16 @@ func httpGetAddrs(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func serveHTTP(ctx context.Context, addr string) error {
+func serveHTTP(ctx context.Context, addr string, amgr *Manager) error {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("can't listen on %s. web server quitting: %w", addr, err)
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc(api.GetAddrsPath, httpGetAddrs)
+	mux.HandleFunc(api.GetAddrsPath, func(w http.ResponseWriter, r *http.Request) {
+		httpGetAddrs(w, r, amgr)
+	})
 
 	srv := &http.Server{
 		Handler:      mux,
