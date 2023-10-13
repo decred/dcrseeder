@@ -161,6 +161,8 @@ func run() int {
 		return 1
 	}
 
+	defer log.Print("Bye!")
+
 	// Prefix log lines with current network, e.g. "[mainnet]" or "[testnet]".
 	logPrefix := fmt.Sprintf("[%.7s] ", cfg.netParams.Name)
 	log := log.New(os.Stdout, logPrefix, log.LstdFlags|log.Lmsgprefix)
@@ -181,7 +183,10 @@ func run() int {
 		return 1
 	}
 
+	// Wait for all subsystems to shut down before returning and allowing the
+	// process to end.
 	var wg sync.WaitGroup
+	defer wg.Wait()
 
 	wg.Add(1)
 	go func() {
@@ -203,10 +208,6 @@ func run() int {
 		server.run(ctx) // Only returns on context cancellation.
 		log.Print("HTTP server done.")
 	}()
-
-	// Wait for crawler and http server, then stop address manager.
-	wg.Wait()
-	log.Print("Bye!")
 
 	return 0
 }
