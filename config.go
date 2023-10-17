@@ -34,9 +34,14 @@ var (
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	Listen  string `long:"httplisten" description:"HTTP listen on address:port"`
-	Seeder  string `short:"s" description:"IP address of a working node"`
-	TestNet bool   `long:"testnet" description:"Use testnet"`
+	Mainnet *netConfig `group:"Mainnet" namespace:"mainnet"`
+	Testnet *netConfig `group:"Testnet" namespace:"testnet"`
+}
+
+type netConfig struct {
+	Enabled bool   `long:"enabled" description:"Enable dcrseeder on this network"`
+	Listen  string `long:"listen" description:"HTTP listen on address:port (must be unique per network)"`
+	Seeder  string `long:"seeder" description:"IP address of a working node on this network"`
 
 	netParams *chaincfg.Params
 	seederIP  netip.AddrPort
@@ -101,27 +106,46 @@ func loadConfig() (*config, error) {
 		}
 		return nil, err
 	}
-	if cfg.TestNet {
-		cfg.netParams = chaincfg.TestNet3Params()
-	} else {
-		cfg.netParams = chaincfg.MainNetParams()
+
+	if !cfg.Mainnet.Enabled && !cfg.Testnet.Enabled {
+		return nil, fmt.Errorf("no networks enabled")
 	}
 
-	cfg.dataDir = filepath.Join(defaultHomeDir, cfg.netParams.Name)
+	parseNet := func(cfg *netConfig, params *chaincfg.Params) error {
+		// Only parse params for this network if it is enabled.
+		if !cfg.Enabled {
+			return nil
+		}
 
-	if cfg.Listen == "" {
-		return nil, fmt.Errorf("no listeners specified")
+		cfg.netParams = params
+		cfg.dataDir = filepath.Join(defaultHomeDir, cfg.netParams.Name)
+
+		if cfg.Listen == "" {
+			return fmt.Errorf("no listeners specified")
+		}
+		cfg.Listen = normalizeAddress(cfg.Listen, defaultHTTPPort)
+
+		if len(cfg.Seeder) == 0 {
+			return fmt.Errorf("no seeder specified")
+		}
+		cfg.Seeder = normalizeAddress(cfg.Seeder, cfg.netParams.DefaultPort)
+
+		cfg.seederIP, err = netip.ParseAddrPort(cfg.Seeder)
+		if err != nil {
+			return fmt.Errorf("invalid seeder ip: %v", err)
+		}
+
+		return nil
 	}
-	cfg.Listen = normalizeAddress(cfg.Listen, defaultHTTPPort)
 
-	if len(cfg.Seeder) == 0 {
-		return nil, fmt.Errorf("no seeder specified")
-	}
-	cfg.Seeder = normalizeAddress(cfg.Seeder, cfg.netParams.DefaultPort)
-
-	cfg.seederIP, err = netip.ParseAddrPort(cfg.Seeder)
+	err = parseNet(cfg.Mainnet, chaincfg.MainNetParams())
 	if err != nil {
-		return nil, fmt.Errorf("invalid seeder ip: %v", err)
+		return nil, fmt.Errorf("mainnet params error: %w", err)
+	}
+
+	err = parseNet(cfg.Testnet, chaincfg.TestNet3Params())
+	if err != nil {
+		return nil, fmt.Errorf("testnet params error: %w", err)
 	}
 
 	return &cfg, nil

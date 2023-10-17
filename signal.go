@@ -17,7 +17,7 @@ var interruptSignals = []os.Signal{os.Interrupt}
 
 // shutdownListener returns a context whose done channel will be closed when OS
 // signals such as SIGINT (Ctrl+C) are received.
-func shutdownListener() context.Context {
+func shutdownListener() (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		interruptChannel := make(chan os.Signal, 1)
@@ -39,5 +39,5 @@ func shutdownListener() context.Context {
 		}
 	}()
 
-	return ctx
+	return ctx, cancel
 }

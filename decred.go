@@ -153,7 +153,7 @@ func main() {
 // run is the real main function for dcrseeder. It is necessary to work around
 // the fact that deferred functions do not run when os.Exit() is called.
 func run() int {
-	ctx := shutdownListener()
+	ctx, cancel := shutdownListener()
 
 	cfg, err := loadConfig()
 	if err != nil {
@@ -163,51 +163,72 @@ func run() int {
 
 	defer log.Print("Bye!")
 
-	// Prefix log lines with current network, e.g. "[mainnet]" or "[testnet]".
-	logPrefix := fmt.Sprintf("[%.7s] ", cfg.netParams.Name)
-	log := log.New(os.Stdout, logPrefix, log.LstdFlags|log.Lmsgprefix)
-
-	amgr, err := NewManager(cfg.dataDir, log)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "NewManager: %v\n", err)
-		return 1
-	}
-
-	amgr.AddAddresses([]netip.AddrPort{cfg.seederIP})
-
-	c := newCrawler(cfg.netParams, amgr, log)
-
-	server, err := newServer(cfg.Listen, amgr, log)
-	if err != nil {
-		fmt.Fprint(os.Stderr, err)
-		return 1
-	}
-
 	// Wait for all subsystems to shut down before returning and allowing the
 	// process to end.
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		amgr.run(ctx) // Only returns on context cancellation.
-		log.Print("Address manager done.")
-	}()
+	runNet := func(cfg *netConfig) error {
+		// Nothing to do if this network is not enabled.
+		if !cfg.Enabled {
+			return nil
+		}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		c.run(ctx) // Only returns on context cancellation.
-		log.Print("Crawler done.")
-	}()
+		// Prefix log lines with current network, e.g. "[mainnet]" or "[testnet]".
+		logPrefix := fmt.Sprintf("[%.7s] ", cfg.netParams.Name)
+		log := log.New(os.Stdout, logPrefix, log.LstdFlags|log.Lmsgprefix)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		server.run(ctx) // Only returns on context cancellation.
-		log.Print("HTTP server done.")
-	}()
+		amgr, err := NewManager(cfg.dataDir, log)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
+		amgr.AddAddresses([]netip.AddrPort{cfg.seederIP})
+
+		c := newCrawler(cfg.netParams, amgr, log)
+
+		server, err := newServer(cfg.Listen, amgr, log)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			amgr.run(ctx) // Only returns on context cancellation.
+			log.Print("Address manager done.")
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c.run(ctx) // Only returns on context cancellation.
+			log.Print("Crawler done.")
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			server.run(ctx) // Only returns on context cancellation.
+			log.Print("HTTP server done.")
+		}()
+
+		return nil
+	}
+
+	err = runNet(cfg.Mainnet)
+	if err != nil {
+		cancel()
+		return 1
+	}
+
+	err = runNet(cfg.Testnet)
+	if err != nil {
+		cancel()
+		return 1
+	}
 
 	return 0
 }
