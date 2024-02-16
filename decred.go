@@ -96,6 +96,9 @@ func (c *crawler) testPeer(ctx context.Context, ip netip.AddrPort) {
 	// Wait for the verack message or timeout in case of failure.
 	select {
 	case <-verack:
+		if p.ProtocolVersion() < wire.RemoveRejectVersion {
+			return
+		}
 		// Mark this peer as a good node.
 		c.amgr.Good(ip, p.Services(), p.ProtocolVersion())
 
