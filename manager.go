@@ -254,6 +254,7 @@ func (m *Manager) prunePeers() {
 	m.mtx.Lock()
 	now := time.Now()
 
+	protoMap := make(map[uint32]uint)
 	var count int
 	for k, node := range m.nodes {
 		// do not remove untried nodes
@@ -274,11 +275,16 @@ func (m *Manager) prunePeers() {
 			count++
 			continue
 		}
+		protoMap[node.ProtocolVersion]++
 	}
 	l := len(m.nodes)
 	m.mtx.Unlock()
 
-	m.log.Printf("Pruned %d addresses: %d remaining", count, l)
+	var t string
+	for proto, count := range protoMap {
+		t += fmt.Sprintf(" (%v:%v)", proto, count)
+	}
+	m.log.Printf("Pruned %d addresses: %d remaining%s", count, l, t)
 }
 
 func (m *Manager) deserializePeers() error {
