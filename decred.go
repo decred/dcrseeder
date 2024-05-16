@@ -64,7 +64,7 @@ func (c *crawler) testPeer(ctx context.Context, ip netip.AddrPort) {
 					p.Addr(), len(msg.AddrList), added)
 				onaddr <- struct{}{}
 			},
-			OnVerAck: func(p *peer.Peer, msg *wire.MsgVerAck) {
+			OnVerAck: func(p *peer.Peer, _ *wire.MsgVerAck) {
 				c.log.Printf("Adding peer %v with services %v pver %d",
 					p.NA().IP.String(), p.Services(), p.ProtocolVersion())
 				verack <- struct{}{}
